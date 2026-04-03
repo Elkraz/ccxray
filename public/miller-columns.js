@@ -421,16 +421,17 @@ function selectProject(name) {
   // Toggle: clicking already-selected project returns to (all)
   selectedProjectName = (name !== null && name === selectedProjectName) ? null : name;
   renderProjectsCol();
-
-  // Apply combined project + session filter
   applySessionFilter();
 
-  // Auto-select the latest visible session (first in DOM = most recent, since sorted by recency)
-  const visible = [...colSessions.querySelectorAll('.session-item')].filter(el => el.style.display !== 'none');
-  if (visible.length) {
-    const firstSid = visible[0].dataset.sessionId;
-    selectSessionAndLatestTurn(firstSid);
-  }
+  // Clear downstream — Miller column rule: N+2 onwards must clear
+  selectedSessionId = null;
+  selectedTurnIdx = -1;
+  selectedSection = null;
+  selectedMessageIdx = -1;
+  colTurns.querySelectorAll('.turn-item').forEach(el => { el.style.display = 'none'; });
+  colSections.innerHTML = '';
+  colDetail.innerHTML = '';
+  renderBreadcrumb();
   setFocus('projects');
 }
 
@@ -854,10 +855,26 @@ function syncUrlFromState() {
 function selectSession(id) {
   setFocus('sessions');
   if (id === selectedSessionId) return;
-  const newId = id;
+  selectedSessionId = id;
+  selectedTurnIdx = -1;
   selectedSection = null;
-  selectSessionAndLatestTurn(newId);
-  renderSessionToolBar(newId);
+  selectedMessageIdx = -1;
+
+  // Highlight selected session
+  colSessions.querySelectorAll('.session-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.sessionId === id);
+  });
+  // Show turns for this session
+  colTurns.querySelectorAll('.turn-item').forEach(el => {
+    el.style.display = (id && el.dataset.sessionId === id) ? '' : 'none';
+  });
+  // Clear downstream — Miller column rule: N+2 onwards must clear
+  colSections.innerHTML = '';
+  colDetail.innerHTML = '';
+
+  renderSessionToolBar(id);
+  renderSessionSparkline(id);
+  renderBreadcrumb();
 }
 
 // Coalesced render scheduler — merges multiple async render requests into one rAF

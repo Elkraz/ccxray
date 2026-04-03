@@ -94,7 +94,7 @@ document.addEventListener('keydown', (e) => {
     if (!sessIds.length) return;
     const cur = selectedSessionId ? sessIds.indexOf(selectedSessionId) : sessIds.length - 1;
     const next = Math.max(0, Math.min(sessIds.length - 1, cur + (key === 'ArrowDown' ? 1 : -1)));
-    selectSessionAndLatestTurn(sessIds[next]);
+    selectSession(sessIds[next]);
   } else if (focusedCol === 'turns') {
     if (key === 'ArrowLeft') { setFocus('sessions'); return; }
     if (key === 'ArrowRight' && selectedTurnIdx >= 0) { setFocus('sections'); return; }

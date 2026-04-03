@@ -46,7 +46,7 @@
   #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
   #topbar { border-bottom: 1px solid var(--border); flex-shrink: 0; }
   #topbar-row1 { display: flex; align-items: center; gap: 12px; padding: 6px 16px; }
-  #topbar-row1 h1 { font-size: 13px; color: var(--accent); display: flex; align-items: center; gap: 8px; white-space: nowrap; margin: 0; }
+  #topbar-row1 h1 { font-size: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; white-space: nowrap; margin: 0; }
   h1 .dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   #topbar-tabs { display: flex; gap: 2px; margin-left: 4px; }
