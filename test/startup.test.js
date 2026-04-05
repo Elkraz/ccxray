@@ -1094,6 +1094,60 @@ describe('Concurrent proxy requests', () => {
   });
 });
 
+// ── Hub crash recovery race condition ────────────────────────────────
+
+describe('Hub recovery race: two simultaneous forks', () => {
+  let port;
+
+  after(() => {
+    // Kill any hub on port
+    try {
+      const lockPath = path.join(TEST_HOME, 'hub.json');
+      if (fs.existsSync(lockPath)) {
+        const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+        try { process.kill(lock.pid, 'SIGKILL'); } catch {}
+        fs.unlinkSync(lockPath);
+      }
+    } catch {}
+  });
+
+  it('two concurrent forkHub calls → only one hub survives', async () => {
+    port = await findFreePort();
+
+    // Fork two hubs simultaneously on the same port
+    const child1 = spawnServer(['--port', String(port), '--hub-mode']);
+    const child2 = spawnServer(['--port', String(port), '--hub-mode']);
+
+    // Wait for one to succeed (write lockfile)
+    await waitForPort(port);
+
+    // Only one hub should be listening
+    const health = await httpGet(port, '/_api/health');
+    assert.deepEqual(health, { ok: true });
+
+    // Lockfile should exist with correct port
+    const lockPath = path.join(TEST_HOME, 'hub.json');
+    assert.ok(fs.existsSync(lockPath));
+    const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    assert.equal(lock.port, port);
+
+    // Clean up both children
+    await killAndWait(child1);
+    await killAndWait(child2);
+
+    // Wait for port release
+    await new Promise(resolve => {
+      const check = () => {
+        const srv = net.createServer();
+        srv.once('error', () => setTimeout(check, 200));
+        srv.once('listening', () => srv.close(() => resolve()));
+        srv.listen(port);
+      };
+      check();
+    });
+  });
+});
+
 function collectSSESnapshot(port, timeoutMs = 2000) {
   return new Promise(resolve => {
     const events = [];
