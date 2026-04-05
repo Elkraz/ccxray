@@ -14,6 +14,9 @@ process.env.CCXRAY_HOME = TEST_HUB_DIR;
 // Now require hub (picks up CCXRAY_HOME)
 const hub = require('../server/hub');
 
+// Inject no-op shutdown so idle timer never calls process.exit in tests
+hub.setOnShutdown(() => {});
+
 after(() => {
   // Cleanup temp dir
   fs.rmSync(TEST_HUB_DIR, { recursive: true, force: true });
@@ -139,14 +142,6 @@ describe('client lifecycle', () => {
     const status = hub.getHubStatus();
     assert.equal(status.clients.length, 0);
   });
-});
-
-// Cancel idle timer left by client lifecycle after() to prevent process.exit
-describe('idle timer guard', () => {
-  it('cancels idle timer from previous suite', () => {
-    hub.addClient(99999, '/__idle_guard__');
-  });
-  after(() => { hub.removeClient(99999); hub.addClient(99999, '/__idle_guard__'); });
 });
 
 // ── Unit: hub log truncation ────────────────────────────────────────
@@ -448,20 +443,11 @@ describe('register/unregister via HTTP', () => {
   });
 });
 
-// ── Helper: cancel idle timer without leaving clients ──────────────
-// addClient cancels any pending idle timer; we immediately remove it
-// but that re-arms the timer, so we add a second time to cancel again.
-// The net effect: idle timer is cancelled, client map has one entry (guardPid).
-function cancelIdleTimer(guardPid) {
-  hub.addClient(guardPid, '/__guard__');
-}
-
+// With setOnShutdown(() => {}), idle timer is harmless — just clear clients.
 function clearAllClients() {
   for (const c of hub.getHubStatus().clients) {
     hub.removeClient(c.pid);
   }
-  // removeClient on last client starts idle timer — cancel it
-  cancelIdleTimer(88888);
 }
 
 // ── L1: firstClient flag ───────────────────────────────────────────
@@ -488,8 +474,8 @@ describe('firstClient flag', () => {
   });
 
   it('first client registered → firstClient: true', async () => {
-    // Remove guard so hub is truly empty
-    await httpPost(port, '/_api/hub/unregister', { pid: 88888 });
+    // Ensure hub is truly empty
+    clearAllClients();
     const res = await httpPost(port, '/_api/hub/register', { pid: 50001, cwd: '/a' });
     assert.equal(res.ok, true);
     assert.equal(res.firstClient, true);
@@ -521,8 +507,8 @@ describe('hub idle timer lifecycle', () => {
   after(() => { clearAllClients(); });
 
   it('addClient cancels idle timer started by removeClient', () => {
-    // Remove the guard to make hub empty, then add+remove to arm idle timer
-    hub.removeClient(88888);
+    // Make hub empty, then add+remove to arm idle timer
+    clearAllClients();
     hub.addClient(60001, '/timer-test');
     hub.removeClient(60001);
     // Idle timer is now ticking (5s to process.exit)
@@ -560,8 +546,7 @@ describe('dead client cleanup logic', () => {
   });
 
   it('simulated dead client check removes dead clients', () => {
-    // Remove guard first so we control exact client set
-    hub.removeClient(88888);
+    clearAllClients();
     hub.addClient(999999, '/dead-project');
     hub.addClient(process.pid, '/alive-project');
 

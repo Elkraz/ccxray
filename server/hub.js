@@ -252,6 +252,7 @@ const clients = new Map(); // pid → { cwd, connectedAt }
 let idleTimer = null;
 let deadCheckInterval = null;
 let hubListenPort = null; // set once at startup, survives lockfile deletion
+let onShutdown = null; // injectable shutdown handler (default: process.exit)
 
 function addClient(pid, cwd) {
   if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
@@ -263,10 +264,6 @@ function removeClient(pid) {
   if (clients.size === 0) startIdleTimer();
 }
 
-function cancelIdleTimer() {
-  if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
-}
-
 function startIdleTimer() {
   if (idleTimer) return;
   idleTimer = setTimeout(() => {
@@ -275,10 +272,13 @@ function startIdleTimer() {
   }, IDLE_TIMEOUT_MS);
 }
 
+function setOnShutdown(fn) { onShutdown = fn; }
+
 function shutdownHub() {
   if (deadCheckInterval) clearInterval(deadCheckInterval);
   deleteHubLock();
-  process.exit(0);
+  if (onShutdown) onShutdown();
+  else process.exit(0);
 }
 
 function startDeadClientCheck() {
@@ -407,8 +407,8 @@ module.exports = {
   truncateHubLog,
   addClient,
   removeClient,
-  cancelIdleTimer,
   startIdleTimer,
+  setOnShutdown,
   shutdownHub,
   startDeadClientCheck,
   setHubPort,
