@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **Orphan hub detection**: When `hub.json` lockfile is missing but a hub is still running, clients now probe the default port and reconnect automatically instead of failing with EADDRINUSE
+- **Browser auto-open**: First client connecting to a hub now opens the dashboard, regardless of whether the client forked the hub or discovered an existing one
+- **ECONNRESET handling**: Upstream socket destruction mid-response no longer leaves the client hanging; added `proxyRes` error handler for both SSE and non-SSE paths
+- **OOM on long-running hub**: In-memory entries capped at 5000 (configurable via `CCXRAY_MAX_ENTRIES`), oldest evicted first; disk logs unaffected
+
+### Added
+
+- `CCXRAY_MAX_ENTRIES` environment variable to configure in-memory entry limit (default: 5000)
+- Hub status endpoint includes `app: 'ccxray'` marker for identity verification
+- 57 new tests (98 → 155) covering proxy E2E, SSE streaming, intercept lifecycle, error paths, concurrency, and hub crash recovery
+
 ## 1.1.0
 
 ### Added

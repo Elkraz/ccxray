@@ -119,6 +119,7 @@ ccxray is a transparent HTTP proxy. It forwards requests to Anthropic unchanged,
 | `BROWSER` | — | Set to `none` to disable auto-open |
 | `AUTH_TOKEN` | _(none)_ | API key for access control (disabled when unset) |
 | `CCXRAY_HOME` | `~/.ccxray` | Base directory for hub lockfile, logs, and hub.log |
+| `CCXRAY_MAX_ENTRIES` | `5000` | Max in-memory entries (oldest evicted; disk logs unaffected) |
 
 Logs are stored in `~/.ccxray/logs/` as `{timestamp}_req.json` and `{timestamp}_res.json`. Upgrading from v1.0? Logs previously in `./logs/` are automatically migrated on first run.
 

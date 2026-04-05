@@ -27,21 +27,21 @@ No build step. No linting. Restart to apply changes.
 | Module | Purpose |
 |--------|---------|
 | `server/index.js` | Entry point: HTTP server, request routing, startup |
-| `server/config.js` | PORT, ANTHROPIC_HOST, LOGS_DIR, model context windows |
+| `server/config.js` | PORT, ANTHROPIC_HOST/PORT/PROTOCOL, LOGS_DIR, MAX_ENTRIES, model context windows |
 | `server/pricing.js` | LiteLLM price fetch, 24h cache, fallback rates, cost calculation |
 | `server/cost-budget.js` | Cost data orchestration: cache, warm-up, grouping |
 | `server/cost-worker.js` | Child process: scans `~/.claude/` JSONL files without blocking event loop |
-| `server/store.js` | In-memory state: entries[], sseClients[], sessions, intercept |
+| `server/store.js` | In-memory state: entries[] (capped at MAX_ENTRIES), sseClients[], sessions, intercept |
 | `server/sse-broadcast.js` | SSE broadcast to dashboard clients, entry summarization |
 | `server/helpers.js` | Tokenization, context breakdown, SSE parsing, formatting |
 | `server/system-prompt.js` | Version index, B2 block splitting, unified diff |
 | `server/restore.js` | Startup log restoration, lazy-load req/res from disk |
-| `server/forward.js` | HTTPS proxy to Anthropic, SSE capture, response logging |
+| `server/forward.js` | HTTP/HTTPS proxy to Anthropic, SSE capture, response logging, proxyRes error handling |
 | `server/routes/api.js` | REST endpoints for entries, tokens, system prompt |
 | `server/routes/sse.js` | SSE endpoint |
 | `server/routes/intercept.js` | Intercept toggle/approve/reject/timeout |
 | `server/routes/costs.js` | Cost budget endpoints |
-| `server/hub.js` | Multi-project hub: lockfile (`~/.ccxray/hub.json`), discovery, client registration, idle shutdown, crash auto-recovery |
+| `server/hub.js` | Multi-project hub: lockfile (`~/.ccxray/hub.json`), discovery (with orphan port probe fallback), client registration, idle shutdown (injectable via setOnShutdown), crash auto-recovery |
 | `server/auth.js` | API key auth middleware (enabled via `AUTH_TOKEN` env) |
 | `server/storage/` | Storage adapters (local filesystem, S3/R2) |
 
