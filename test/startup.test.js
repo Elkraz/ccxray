@@ -851,6 +851,118 @@ describe('Proxy upstream error responses', () => {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
+// ── State consistency after errors ──────────────────────────────────
+
+describe('Store state consistency after errors', () => {
+  let mockUpstream;
+  let mockPort;
+  let proxyChild;
+  let proxyPort;
+  let nextResponse = null;
+  const SESSION_ID = 'bbbbcccc-dddd-eeee-ffff-000000000000';
+
+  function makeBody(content) {
+    return JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 100,
+      messages: [{ role: 'user', content }],
+      metadata: { user_id: JSON.stringify({ session_id: SESSION_ID }) },
+    });
+  }
+
+  before(async () => {
+    mockUpstream = http.createServer((req, res) => {
+      let body = '';
+      req.on('data', c => { body += c; });
+      req.on('end', () => {
+        if (nextResponse) {
+          const { status, headers, body: resBody } = nextResponse;
+          res.writeHead(status, headers || { 'Content-Type': 'application/json' });
+          res.end(typeof resBody === 'string' ? resBody : JSON.stringify(resBody));
+        } else {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            id: 'msg_ok', type: 'message', role: 'assistant',
+            content: [{ type: 'text', text: 'ok' }],
+            model: 'claude-sonnet-4-20250514',
+            usage: { input_tokens: 10, output_tokens: 5 },
+          }));
+        }
+      });
+    });
+    await new Promise(r => mockUpstream.listen(0, r));
+    mockPort = mockUpstream.address().port;
+
+    proxyPort = await findFreePort();
+    proxyChild = spawnServer(['--port', String(proxyPort)], {
+      env: {
+        ANTHROPIC_TEST_HOST: 'localhost',
+        ANTHROPIC_TEST_PORT: String(mockPort),
+        ANTHROPIC_TEST_PROTOCOL: 'http',
+      },
+    });
+    await waitForPort(proxyPort);
+
+    // Establish session
+    await sendProxyRequest(proxyPort, makeBody('init'));
+    await new Promise(r => setTimeout(r, 200));
+  });
+
+  after(async () => {
+    nextResponse = null;
+    await killAndWait(proxyChild);
+    await new Promise(r => mockUpstream.close(r));
+  });
+
+  it('session becomes inactive after upstream 500', async () => {
+    nextResponse = { status: 500, body: { type: 'error', error: { message: 'fail' } } };
+    await sendProxyRequest(proxyPort, makeBody('trigger 500'));
+    nextResponse = null;
+
+    // Check session status via SSE — should be inactive
+    await new Promise(r => setTimeout(r, 200));
+    const sseData = await collectSSESnapshot(proxyPort);
+    const sessionStatus = sseData.find(d => d._type === 'session_status' && d.sessionId === SESSION_ID);
+    assert.ok(sessionStatus, 'Should have session_status event');
+    assert.equal(sessionStatus.active, false, 'Session should be inactive after error');
+  });
+
+  it('subsequent request succeeds after previous error', async () => {
+    nextResponse = null; // back to normal
+    const response = await sendProxyRequest(proxyPort, makeBody('after error'));
+    assert.equal(response.status, 200);
+    const body = JSON.parse(response.body);
+    assert.equal(body.content[0].text, 'ok');
+  });
+
+  it('entries count is consistent after mixed success/error', async () => {
+    const entries = await httpGet(proxyPort, '/_api/entries');
+    // Should have entries from: init, trigger 500, after error (at least 3)
+    assert.ok(entries.length >= 3, `Expected >= 3 entries, got ${entries.length}`);
+  });
+});
+
+function collectSSESnapshot(port, timeoutMs = 2000) {
+  return new Promise(resolve => {
+    const events = [];
+    const req = http.get(`http://localhost:${port}/_events`, res => {
+      let buf = '';
+      const timer = setTimeout(() => { req.destroy(); resolve(events); }, timeoutMs);
+      res.on('data', chunk => {
+        buf += chunk.toString();
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try { events.push(JSON.parse(line.slice(6))); } catch {}
+        }
+      });
+      res.on('end', () => { clearTimeout(timer); resolve(events); });
+    });
+    req.on('error', () => resolve(events));
+  });
+}
+
 function waitForSSEEvent(port, eventType, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const req = http.get(`http://localhost:${port}/_events`, res => {
