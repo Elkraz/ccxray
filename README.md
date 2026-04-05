@@ -24,7 +24,7 @@ ccxray makes it a glass box.
 npx ccxray claude
 ```
 
-That's it. Proxy starts, Claude Code launches through it, and the dashboard opens automatically in your browser.
+That's it. Proxy starts, Claude Code launches through it, and the dashboard opens automatically in your browser. Run it in multiple terminals — they automatically share one dashboard.
 
 ### Other ways to run
 
@@ -49,6 +49,16 @@ cd ~/project-a && ccxray claude     # Starts hub + claude
 cd ~/project-b && ccxray claude     # Connects to existing hub
 
 # Both projects visible in one dashboard at http://localhost:5577
+```
+
+If the hub process crashes, connected clients automatically recover within seconds.
+
+```bash
+$ ccxray status
+Hub: http://localhost:5577 (pid 12345, uptime 3600s, v1.1.0)
+Connected clients (2):
+  [1] pid 23456 — ~/dev/project-a
+  [2] pid 34567 — ~/dev/project-b
 ```
 
 Use `--port` to opt out and run an independent server instead.
@@ -110,7 +120,7 @@ ccxray is a transparent HTTP proxy. It forwards requests to Anthropic unchanged,
 | `AUTH_TOKEN` | _(none)_ | API key for access control (disabled when unset) |
 | `CCXRAY_HOME` | `~/.ccxray` | Base directory for hub lockfile, logs, and hub.log |
 
-Logs are stored in `~/.ccxray/logs/` as `{timestamp}_req.json` and `{timestamp}_res.json`.
+Logs are stored in `~/.ccxray/logs/` as `{timestamp}_req.json` and `{timestamp}_res.json`. Upgrading from v1.0? Logs previously in `./logs/` are automatically migrated on first run.
 
 ## Docker
 

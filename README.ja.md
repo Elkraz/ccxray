@@ -24,7 +24,7 @@ ccxrayはそれをガラス箱に変えます。
 npx ccxray claude
 ```
 
-これだけです。プロキシが起動し、Claude Codeがプロキシ経由で接続し、ダッシュボードが自動的にブラウザで開きます。
+これだけです。プロキシが起動し、Claude Codeがプロキシ経由で接続し、ダッシュボードが自動的にブラウザで開きます。複数のターミナルで実行すると、自動的に一つのダッシュボードを共有します。
 
 ### その他の実行方法
 
@@ -49,6 +49,16 @@ cd ~/project-a && ccxray claude     # hubを起動 + claude
 cd ~/project-b && ccxray claude     # 既存のhubに接続
 
 # 両プロジェクトが http://localhost:5577 のダッシュボードに表示
+```
+
+Hubプロセスがクラッシュした場合、接続中のクライアントは数秒以内に自動的に復旧します。
+
+```bash
+$ ccxray status
+Hub: http://localhost:5577 (pid 12345, uptime 3600s, v1.1.0)
+Connected clients (2):
+  [1] pid 23456 — ~/dev/project-a
+  [2] pid 34567 — ~/dev/project-b
 ```
 
 `--port` を使用すると独立モードで実行できます。
@@ -110,7 +120,7 @@ ccxrayは透過型HTTPプロキシです。リクエストをそのままAnthrop
 | `AUTH_TOKEN` | _（なし）_ | アクセス制御用APIキー（未設定時は無効） |
 | `CCXRAY_HOME` | `~/.ccxray` | hubロックファイル、ログ、hub.logの基本ディレクトリ |
 
-ログは`~/.ccxray/logs/`に`{timestamp}_req.json`と`{timestamp}_res.json`として保存されます。
+ログは`~/.ccxray/logs/`に`{timestamp}_req.json`と`{timestamp}_res.json`として保存されます。v1.0からアップグレードする場合、`./logs/`のログは初回起動時に自動的に移行されます。
 
 ## Docker
 

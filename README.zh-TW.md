@@ -24,7 +24,7 @@ ccxray 讓它變成透明的。
 npx ccxray claude
 ```
 
-就這樣。代理啟動、Claude Code 透過代理連線、儀表板自動在瀏覽器中開啟。
+就這樣。代理啟動、Claude Code 透過代理連線、儀表板自動在瀏覽器中開啟。在多個終端機執行時會自動共用同一個 dashboard。
 
 ### 其他執行方式
 
@@ -49,6 +49,16 @@ cd ~/project-a && ccxray claude     # 啟動 hub + claude
 cd ~/project-b && ccxray claude     # 連線至現有 hub
 
 # 兩個專案都顯示在 http://localhost:5577 的 dashboard
+```
+
+如果 hub 意外終止，已連線的 client 會在數秒內自動恢復。
+
+```bash
+$ ccxray status
+Hub: http://localhost:5577 (pid 12345, uptime 3600s, v1.1.0)
+Connected clients (2):
+  [1] pid 23456 — ~/dev/project-a
+  [2] pid 34567 — ~/dev/project-b
 ```
 
 使用 `--port` 可改為獨立模式。
@@ -110,7 +120,7 @@ ccxray 是透明的 HTTP 代理。它將請求原封不動地轉發到 Anthropic
 | `AUTH_TOKEN` | _（無）_ | 存取控制用 API 金鑰（未設定時停用） |
 | `CCXRAY_HOME` | `~/.ccxray` | 基底目錄，存放 hub lockfile、logs、hub.log |
 
-日誌儲存在 `~/.ccxray/logs/`，格式為 `{timestamp}_req.json` 和 `{timestamp}_res.json`。
+日誌儲存在 `~/.ccxray/logs/`，格式為 `{timestamp}_req.json` 和 `{timestamp}_res.json`。從 v1.0 升級？`./logs/` 中的日誌會在首次啟動時自動遷移。
 
 ## Docker
 
