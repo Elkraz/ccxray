@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
@@ -109,12 +109,8 @@ describe('checkVersionCompat', () => {
 // ── Unit: client lifecycle ──────────────────────────────────────────
 
 describe('client lifecycle', () => {
-  after(() => {
-    // Clear clients map via remove
-    for (const [pid] of hub.getHubStatus().clients.map(c => [c.pid])) {
-      hub.removeClient(pid);
-    }
-  });
+  beforeEach(() => { clearAllClients(); });
+  after(() => { clearAllClients(); });
 
   it('addClient adds to status', () => {
     hub.addClient(11111, '/tmp/project-a');
@@ -125,12 +121,15 @@ describe('client lifecycle', () => {
   });
 
   it('addClient with second client', () => {
+    hub.addClient(11111, '/tmp/project-a');
     hub.addClient(22222, '/tmp/project-b');
     const status = hub.getHubStatus();
     assert.equal(status.clients.length, 2);
   });
 
   it('removeClient removes from status', () => {
+    hub.addClient(11111, '/tmp/project-a');
+    hub.addClient(22222, '/tmp/project-b');
     hub.removeClient(11111);
     const status = hub.getHubStatus();
     assert.equal(status.clients.length, 1);
@@ -138,7 +137,8 @@ describe('client lifecycle', () => {
   });
 
   it('removeClient on last client leaves empty', () => {
-    hub.removeClient(22222);
+    hub.addClient(11111, '/tmp/project-a');
+    hub.removeClient(11111);
     const status = hub.getHubStatus();
     assert.equal(status.clients.length, 0);
   });
@@ -522,8 +522,9 @@ describe('hub idle timer lifecycle', () => {
   });
 
   it('removing non-last client does not trigger idle timer', () => {
-    // 60002 exists from previous test
+    clearAllClients();
     hub.addClient(60001, '/x');
+    hub.addClient(60002, '/y');
     const statusBefore = hub.getHubStatus();
     assert.equal(statusBefore.clients.length, 2);
 
@@ -564,9 +565,13 @@ describe('dead client cleanup logic', () => {
   });
 
   it('live client survives dead client check', () => {
-    // process.pid is still registered from previous test
-    const status = hub.getHubStatus();
-    assert.ok(status.clients.some(c => c.pid === process.pid));
+    clearAllClients();
+    hub.addClient(999999, '/dead');
+    hub.addClient(process.pid, '/alive');
+    for (const c of hub.getHubStatus().clients) {
+      if (!hub.isPidAlive(c.pid)) hub.removeClient(c.pid);
+    }
+    assert.ok(hub.getHubStatus().clients.some(c => c.pid === process.pid));
   });
 });
 
