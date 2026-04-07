@@ -1,6 +1,16 @@
 # Changelog
 
-## [Unreleased]
+## 1.2.0
+
+### Added
+
+- **Multi-agent system prompt browsing**: Three-column Miller layout for the System Prompt page — browse prompts across all agent types (Claude Code, General Purpose, Explore, Web Search, Title Generator, Name Generator) with per-agent version history and diff viewer
+- **Content-based version deduplication**: Version index keyed by `coreHash` instead of version string — identical system prompts across cc_version bumps are collapsed into a single entry with hash-based change detection
+- **`KNOWN_AGENTS` registry**: Centralized agent type detection table replacing hardcoded if/else chains, with regex fallback for unknown future agent types
+- **`sessionInferred` flag**: Entries attributed by inference (not explicit session_id) carry a `sessionInferred` flag through the full pipeline (store → forward → SSE → dashboard). Displayed as a yellow dashed "inferred" badge in the turn list and detail panel header.
+- `CCXRAY_MAX_ENTRIES` environment variable to configure in-memory entry limit (default: 5000)
+- Hub status endpoint includes `app: 'ccxray'` marker for identity verification
+- 70 new tests (98 → 168) covering proxy E2E, SSE streaming, intercept lifecycle, error paths, concurrency, hub crash recovery, subagent session attribution, and agent type detection
 
 ### Fixed
 
@@ -10,13 +20,7 @@
 - **Browser auto-open**: First client connecting to a hub now opens the dashboard, regardless of whether the client forked the hub or discovered an existing one
 - **ECONNRESET handling**: Upstream socket destruction mid-response no longer leaves the client hanging; added `proxyRes` error handler for both SSE and non-SSE paths
 - **OOM on long-running hub**: In-memory entries capped at 5000 (configurable via `CCXRAY_MAX_ENTRIES`), oldest evicted first; disk logs unaffected
-
-### Added
-
-- **`sessionInferred` flag**: Entries attributed by inference (not explicit session_id) carry a `sessionInferred` flag through the full pipeline (store → forward → SSE → dashboard). Displayed as a yellow dashed "inferred" badge in the turn list and detail panel header.
-- `CCXRAY_MAX_ENTRIES` environment variable to configure in-memory entry limit (default: 5000)
-- Hub status endpoint includes `app: 'ccxray'` marker for identity verification
-- 66 new tests (98 → 164) covering proxy E2E, SSE streaming, intercept lifecycle, error paths, concurrency, hub crash recovery, and subagent session attribution
+- **Version list accuracy**: Unchanged versions (same coreHash) are dimmed; size delta only shown when content actually changed; `firstSeen` uses file mtime instead of filename parsing
 
 ## 1.1.0
 

@@ -79,7 +79,7 @@ Track your real spending. Session heatmap, burn rate, ROI calculator — know ex
 
 ### System Prompt Tracking
 
-Automatic version detection with diff viewer. See exactly what changed between Claude Code updates — never miss a prompt change again.
+Automatic version detection with diff viewer. Browse system prompts across all agent types — main agent, subagents (Explore, Web Search, etc.) — and see exactly what changed between updates.
 
 ![System prompt tracking](https://raw.githubusercontent.com/lis186/ccxray/main/docs/system-prompt.png)
 

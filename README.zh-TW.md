@@ -79,7 +79,7 @@ Connected clients (2):
 
 ### System Prompt 追蹤
 
-自動偵測版本變更，內建 diff 檢視器。精確掌握 Claude Code 更新時改了什麼 — 不再遺漏任何 prompt 變動。
+自動偵測版本變更，內建 diff 檢視器。瀏覽所有 agent 類型的 system prompt — 主 agent、子 agent（Explore、Web Search 等）— 精確掌握每次更新的差異。
 
 ![System Prompt 追蹤](https://raw.githubusercontent.com/lis186/ccxray/main/docs/system-prompt.png)
 

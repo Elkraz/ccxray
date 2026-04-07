@@ -79,7 +79,7 @@ Connected clients (2):
 
 ### システムプロンプト追跡
 
-バージョンの自動検出とdiffビューア。Claude Codeのアップデートで何が変わったかを正確に把握 — プロンプトの変更を見逃しません。
+バージョンの自動検出とdiffビューア。すべてのエージェントタイプ — メインエージェント、サブエージェント（Explore、Web Searchなど）— のシステムプロンプトを閲覧し、更新ごとの変更点を正確に把握できます。
 
 ![システムプロンプト追跡](https://raw.githubusercontent.com/lis186/ccxray/main/docs/system-prompt.png)
 
