@@ -20,8 +20,8 @@ function handleApiRoutes(clientReq, clientRes) {
     const allAgents = [...new Set([...store.versionIndex.values()].map(v => v.agentKey))].sort();
     const vEntries = [...store.versionIndex.values()]
       .filter(v => !filterAgent || v.agentKey === filterAgent)
-      .sort((a, b) => b.version.localeCompare(a.version));
-    const versions = vEntries.map(({ version, reqId, b2Len, coreLen, firstSeen, agentKey, agentLabel }) => ({ version, reqId, b2Len, coreLen, firstSeen, agentKey, agentLabel }));
+      .sort((a, b) => (b.firstSeen || '').localeCompare(a.firstSeen || '') || b.version.localeCompare(a.version));
+    const versions = vEntries.map(({ version, reqId, b2Len, coreLen, coreHash, firstSeen, agentKey, agentLabel }) => ({ version, reqId, b2Len, coreLen, coreHash, firstSeen, agentKey, agentLabel }));
     clientRes.writeHead(200, { 'Content-Type': 'application/json' });
     clientRes.end(JSON.stringify({ versions, agents: allAgents.map(k => ({ key: k, label: store.versionIndex.get([...store.versionIndex.keys()].find(ik => ik.startsWith(k + '::')))?.agentLabel || k })) }));
     return true;
@@ -32,7 +32,9 @@ function handleApiRoutes(clientReq, clientRes) {
     const params = new URLSearchParams(diffMatch[1]);
     const verA = params.get('a'), verB = params.get('b');
     const agentKey = params.get('agent') || 'claude-code';
-    const entA = store.versionIndex.get(`${agentKey}::${verA}`), entB = store.versionIndex.get(`${agentKey}::${verB}`);
+    // Look up by coreHash (new key format) with fallback to legacy version key
+    const lookup = (v) => store.versionIndex.get(`${agentKey}::${v}`) || [...store.versionIndex.values()].find(e => e.agentKey === agentKey && e.version === v);
+    const entA = lookup(verA), entB = lookup(verB);
     if (!entA || !entB) {
       clientRes.writeHead(404, { 'Content-Type': 'application/json' });
       clientRes.end(JSON.stringify({ error: 'version not found' }));

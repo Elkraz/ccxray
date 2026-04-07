@@ -10,20 +10,33 @@ const BLOCK_OWNERS_SERVER = {
   customAgents: 'user', autoMemory: 'user',
 };
 
+// Known agent types by b2 prefix. Order matters — first match wins.
+const KNOWN_AGENTS = [
+  { prefix: 'You are an interactive agent',                key: 'claude-code',       label: 'Claude Code' },
+  { prefix: 'You are an agent for Claude Code',            key: 'general-purpose',   label: 'General Purpose' },
+  { prefix: 'You are a file search specialist',            key: 'explore',           label: 'Explore' },
+  { prefix: 'You are an assistant for performing a web',   key: 'web-search',        label: 'Web Search' },
+  { prefix: 'Generate a concise',                          key: 'title-generator',   label: 'Title Generator' },
+  { prefix: 'Generate a short kebab-case name',            key: 'name-generator',    label: 'Name Generator' },
+];
+
 function extractAgentType(sys) {
   if (!Array.isArray(sys) || sys.length < 2) return { key: 'unknown', label: 'Unknown' };
   const b1 = (sys[1]?.text || '').trim();
   const b2 = (sys[2]?.text || '').trim();
-  // Primary: main Claude Code prompt
-  if (b2.startsWith('You are an interactive agent')) return { key: 'claude-code', label: 'Claude Code' };
-  // Known sub-agents by b2 content (must come before b1 fallback — sub-agents also have b1="You are Claude Code")
-  if (b2.startsWith('Generate a concise')) return { key: 'title-generator', label: 'Title Generator' };
+
+  // Match against known agent types by b2 prefix
+  for (const a of KNOWN_AGENTS) {
+    if (b2.startsWith(a.prefix)) return { key: a.key, label: a.label };
+  }
+
   // Fallback: older versions put the identity in b1
   if (b1.startsWith('You are Claude Code')) return { key: 'claude-code', label: 'Claude Code' };
-  // "You are a/an/the <role>" pattern
+
+  // Regex fallback for unknown future agent types
   const m = b2.match(/^You are (?:a |an |the )?(.+?)(?:\s+for\s|\s+that\s|\s+specializ|\s*[,.]|\n)/i);
   if (m) {
-    const role = m[1].trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40);
+    const role = m[1].trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 30);
     const label = m[1].trim().replace(/\b\w/g, c => c.toUpperCase());
     return { key: role || 'agent', label: label || 'Agent' };
   }

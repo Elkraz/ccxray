@@ -65,6 +65,12 @@ function createLocalStorage(logsDir) {
       return fsp.readFile(path.join(sharedDir, filename), 'utf8');
     },
 
+    async statShared(filename) {
+      try {
+        return await fsp.stat(path.join(sharedDir, filename));
+      } catch { return null; }
+    },
+
     async listShared() {
       try {
         return await fsp.readdir(sharedDir);

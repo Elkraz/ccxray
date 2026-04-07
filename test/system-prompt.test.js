@@ -34,6 +34,43 @@ describe('system-prompt', () => {
       assert.equal(extractAgentType(sys).key, 'claude-code');
     });
 
+    it('detects general-purpose subagent', () => {
+      const sys = [
+        { text: 'billing' },
+        { text: 'You are Claude Code' },
+        { text: 'You are an agent for Claude Code, Anthropic\'s official CLI for Claude. Given the user\'s message...' },
+      ];
+      assert.equal(extractAgentType(sys).key, 'general-purpose');
+      assert.equal(extractAgentType(sys).label, 'General Purpose');
+    });
+
+    it('detects explore subagent', () => {
+      const sys = [
+        { text: 'billing' },
+        { text: 'You are Claude Code' },
+        { text: 'You are a file search specialist for Claude Code...' },
+      ];
+      assert.equal(extractAgentType(sys).key, 'explore');
+    });
+
+    it('detects web-search subagent', () => {
+      const sys = [
+        { text: 'billing' },
+        { text: 'You are Claude Code' },
+        { text: 'You are an assistant for performing a web search tool use' },
+      ];
+      assert.equal(extractAgentType(sys).key, 'web-search');
+    });
+
+    it('detects name-generator', () => {
+      const sys = [
+        { text: 'billing' },
+        { text: 'You are Claude Code' },
+        { text: 'Generate a short kebab-case name (2-4 words) that captures...' },
+      ];
+      assert.equal(extractAgentType(sys).key, 'name-generator');
+    });
+
     it('extracts custom agent type', () => {
       const sys = [
         { text: 'billing' },

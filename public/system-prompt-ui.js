@@ -1,15 +1,81 @@
 // ── System Prompt Changelog ─────────────────────────────────────────────
-let spVersions = [];      // all claude-code versions from API
+let spAllVersions = [];   // all versions from API (unfiltered)
+let spAgents = [];        // sorted agent list [{key, label, count, latestDate}]
+let spSelectedAgent = ''; // currently selected agent key
+let spVersions = [];      // filtered versions for selected agent
 let spSelectedIdx = 0;    // index into spVersions
 let spMode = 'content';   // 'content' or 'diff'
 let hideMinorEdit = false;
 let currentHunkIdx = 0;
 
+const AGENT_ORDER = ['claude-code', 'general-purpose', 'explore', 'web-search', 'title-generator', 'name-generator'];
+
+function spRelativeTime(dateStr) {
+  if (!dateStr) return '';
+  const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return dateStr;
+  const diff = Date.now() - then;
+  if (diff < 60000) return 'now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+  return Math.floor(diff / 86400000) + 'd ago';
+}
+
+function buildAgentList(allVersions, apiAgents) {
+  const agentMap = {};
+  for (const v of allVersions) {
+    const k = v.agentKey;
+    if (!agentMap[k]) agentMap[k] = { key: k, label: v.agentLabel || k, count: 0, latestCoreHash: '', uniqueHashes: new Set() };
+    agentMap[k].count++;
+    if (v.coreHash) agentMap[k].uniqueHashes.add(v.coreHash);
+    if (!agentMap[k].latestCoreHash) agentMap[k].latestCoreHash = v.coreHash || '';
+  }
+  // Also include agents from API that may have 0 versions in current data
+  for (const a of (apiAgents || [])) {
+    if (!agentMap[a.key]) agentMap[a.key] = { key: a.key, label: a.label, count: 0, latestCoreHash: '', uniqueHashes: new Set() };
+  }
+  const agents = Object.values(agentMap);
+  agents.sort((a, b) => {
+    const ia = AGENT_ORDER.indexOf(a.key), ib = AGENT_ORDER.indexOf(b.key);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
+  return agents;
+}
+
+function renderAgentList() {
+  const container = document.getElementById('sp-agent-list');
+  if (!container) return;
+  let html = '<div class="sp-version-list-title">Agents</div>';
+  for (const a of spAgents) {
+    const isActive = a.key === spSelectedAgent;
+    html += '<div class="sp-agent-item' + (isActive ? ' active' : '') + '" onclick="selectAgent(\'' + a.key + '\')">';
+    html += '<div class="sp-agent-label">' + escapeHtml(a.label) + '</div>';
+    const changes = a.uniqueHashes ? a.uniqueHashes.size : 0;
+    const changesStr = changes > 1 ? ' · ' + changes + ' changes' : '';
+    html += '<div class="sp-agent-meta">' + a.count + ' ver' + (a.count !== 1 ? 's' : '') + changesStr + '</div>';
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function selectAgent(agentKey) {
+  spSelectedAgent = agentKey;
+  spVersions = spAllVersions.filter(v => v.agentKey === agentKey);
+  spSelectedIdx = 0;
+  renderAgentList();
+  renderVersionList();
+  if (spVersions.length) loadSelectedVersion();
+  else {
+    const panel = document.getElementById('diff-text-panel');
+    if (panel) panel.innerHTML = '<div style="color:var(--dim);font-size:11px">No versions for this agent.</div>';
+  }
+}
+
 function updateSysPromptBadge() {
   const badge = document.getElementById('sysprompt-badge');
   if (!badge) return;
   fetch('/_api/sysprompt/versions').then(r => r.json()).then(data => {
-    const versions = (data.versions || []).filter(v => v.agentKey === 'claude-code');
+    const versions = data.versions || [];
     if (!versions.length) return;
     const latest = versions[0].version;
     const lastSeen = localStorage.getItem('sysprompt_last_seen');
@@ -31,21 +97,29 @@ async function openSystemPromptPanel(forceDiff) {
   if (panel) panel.innerHTML = '<div style="color:var(--dim);font-size:11px">Loading...</div>';
 
   const data = await fetch('/_api/sysprompt/versions').then(r => r.json());
-  spVersions = (data.versions || []).filter(v => v.agentKey === 'claude-code');
+  spAllVersions = data.versions || [];
+  spAgents = buildAgentList(spAllVersions, data.agents);
+
+  if (!spAgents.length) {
+    if (panel) panel.innerHTML = '<div style="color:var(--dim);font-size:11px">No versions found.</div>';
+    return;
+  }
+
+  // Select first agent (or keep current if still valid)
+  if (!spSelectedAgent || !spAgents.find(a => a.key === spSelectedAgent)) {
+    spSelectedAgent = spAgents[0].key;
+  }
+  spVersions = spAllVersions.filter(v => v.agentKey === spSelectedAgent);
 
   const latest = spVersions[0]?.version;
   if (latest) localStorage.setItem('sysprompt_last_seen', latest);
   if (badge) badge.style.display = 'none';
 
-  if (!spVersions.length) {
-    if (panel) panel.innerHTML = '<div style="color:var(--dim);font-size:11px">No versions found.</div>';
-    return;
-  }
-
   spSelectedIdx = 0;
   spMode = hasBadge ? 'diff' : 'content';
+  renderAgentList();
   renderVersionList();
-  loadSelectedVersion();
+  if (spVersions.length) loadSelectedVersion();
 
   // Update Row 2 context
   const row2 = document.getElementById('row2-sp-version');
@@ -72,21 +146,30 @@ function renderVersionList() {
     const size = v.coreLen ? (v.coreLen / 1000).toFixed(1) + 'k' : '';
     const next = spVersions[i + 1];
     let delta = '';
-    if (v.coreLen && next?.coreLen && v.coreLen !== next.coreLen) {
+    if (next && v.coreLen && next.coreLen && v.coreHash !== next.coreHash) {
       const diff = (v.coreLen - next.coreLen) / 1000;
-      const sign = diff > 0 ? '+' : '';
-      const color = diff > 0 ? 'var(--green)' : 'var(--red)';
-      delta = `<span style="color:${color}">${sign}${diff.toFixed(1)}k</span>`;
+      if (Math.abs(diff) >= 0.1) {
+        const sign = diff > 0 ? '+' : '';
+        const color = diff > 0 ? 'var(--green)' : 'var(--red)';
+        delta = `<span style="color:${color}">${sign}${diff.toFixed(1)}k</span>`;
+      }
     }
     const isActive = i === spSelectedIdx;
+    // Detect if coreHash changed vs the next (older) version
+    const coreChanged = !next || v.coreHash !== next.coreHash;
     let rowBg = '';
-    if (v.coreLen && next?.coreLen && v.coreLen !== next.coreLen) {
-      rowBg = (v.coreLen - next.coreLen) > 0 ? 'background:rgba(46,160,67,0.08)' : 'background:rgba(248,81,73,0.08)';
+    if (coreChanged && next) {
+      if (v.coreLen && next.coreLen) {
+        rowBg = (v.coreLen - next.coreLen) > 0 ? 'background:rgba(46,160,67,0.08)' : 'background:rgba(248,81,73,0.08)';
+      }
     }
-    html += `<div class="sp-version-item${isActive ? ' active' : ''}" data-idx="${i}" onclick="selectVersion(${i})" style="${rowBg}">`;
-    const date = (v.firstSeen || '').slice(5);
+    const dimClass = (!coreChanged && !isActive) ? ' sp-version-unchanged' : '';
+    html += `<div class="sp-version-item${isActive ? ' active' : ''}${dimClass}" data-idx="${i}" onclick="selectVersion(${i})" style="${rowBg}">`;
+    const date = (v.firstSeen || '').slice(5) || '';
+    const hashShort = (v.coreHash || '').slice(0, 5);
+    const hashColor = coreChanged ? 'var(--yellow)' : 'var(--dim)';
     html += `<span>${date}</span>`;
-    html += `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(v.version).slice(0, 12)}</span>`;
+    html += `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-family:monospace;font-size:10px;color:${hashColor}">${hashShort}</span> ${escapeHtml(v.version)}</span>`;
     html += `<span class="sp-size-col" style="text-align:right">${size}</span>`;
     html += `<span class="sp-delta-col" style="min-width:38px;text-align:right">${delta}</span>`;
     html += '</div>';
@@ -155,7 +238,7 @@ async function loadContentForVersion(v) {
   updateModeIndicator();
   if (panel) panel.innerHTML = '<div style="color:var(--dim);font-size:11px">Loading...</div>';
   try {
-    const data = await fetch(`/_api/sysprompt/diff?a=${encodeURIComponent(v.version)}&b=${encodeURIComponent(v.version)}&agent=claude-code`).then(r => r.json());
+    const data = await fetch(`/_api/sysprompt/diff?a=${encodeURIComponent(v.coreHash)}&b=${encodeURIComponent(v.coreHash)}&agent=${encodeURIComponent(spSelectedAgent)}`).then(r => r.json());
     const block = (data.blockDiff || []).find(b => b.block === 'coreInstructions');
     if (block && block.textB) {
       panel.innerHTML = `<pre style="margin:0;font-size:11px;font-family:monospace;line-height:1.5;white-space:pre-wrap;word-break:break-word">${escapeHtml(block.textB)}</pre>`;
@@ -183,7 +266,7 @@ async function loadDiffForVersion(v) {
   if (summary) summary.textContent = `${prev.version} → ${v.version}`;
   if (panel) panel.innerHTML = '<div style="color:var(--dim);font-size:11px">Loading...</div>';
   try {
-    const data = await fetch(`/_api/sysprompt/diff?a=${encodeURIComponent(prev.version)}&b=${encodeURIComponent(v.version)}&agent=claude-code`).then(r => r.json());
+    const data = await fetch(`/_api/sysprompt/diff?a=${encodeURIComponent(prev.coreHash)}&b=${encodeURIComponent(v.coreHash)}&agent=${encodeURIComponent(spSelectedAgent)}`).then(r => r.json());
     const block = (data.blockDiff || []).find(b => b.block === 'coreInstructions');
     if (!block) {
       panel.innerHTML = '<div style="color:var(--dim);font-size:11px">coreInstructions block not found.</div>';
@@ -222,12 +305,12 @@ function updateStatusBar() {
   const bar = document.getElementById('sp-status-bar');
   if (!bar) return;
   if (spMode === 'content') {
-    bar.textContent = '↑↓ navigate   Space: switch to DIFF';
+    bar.textContent = '←→ agent   ↑↓ version   Space: switch to DIFF';
   } else {
     const hunks = document.querySelectorAll('.diff-hunk');
     const total = hunks.length;
     const hunkInfo = total > 0 ? `  j/k: hunk ${currentHunkIdx + 1}/${total}` : '';
-    bar.textContent = `↑↓ navigate   Space: switch to CONTENT${hunkInfo}`;
+    bar.textContent = `←→ agent   ↑↓ version   Space: switch to CONTENT${hunkInfo}`;
   }
 }
 
@@ -310,7 +393,15 @@ document.addEventListener('keydown', (e) => {
   const overlay = document.getElementById('diff-overlay');
   if (!overlay || !overlay.classList.contains('open')) return;
 
-  if (e.key === 'ArrowDown') {
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    const idx = spAgents.findIndex(a => a.key === spSelectedAgent);
+    if (idx > 0) selectAgent(spAgents[idx - 1].key);
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    const idx = spAgents.findIndex(a => a.key === spSelectedAgent);
+    if (idx < spAgents.length - 1) selectAgent(spAgents[idx + 1].key);
+  } else if (e.key === 'ArrowDown') {
     e.preventDefault();
     if (spSelectedIdx < spVersions.length - 1) selectVersion(spSelectedIdx + 1);
   } else if (e.key === 'ArrowUp') {

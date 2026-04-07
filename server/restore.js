@@ -121,17 +121,22 @@ async function buildVersionIndex() {
       const ver = m ? m[1] : null;
       const { key: agentKey, label: agentLabel } = extractAgentType(sys);
       if (ver && b2.length >= 500) {
-        const idxKey = `${agentKey}::${ver}`;
+        const coreText = splitB2IntoBlocks(b2).coreInstructions || '';
+        const coreLen = coreText.length;
+        const coreHash = crypto.createHash('md5').update(coreText).digest('hex').slice(0, 12);
+        const idxKey = `${agentKey}::${coreHash}`;
         const existing = store.versionIndex.get(idxKey);
         if (!existing || b2.length > existing.b2Len) {
-          const coreText = splitB2IntoBlocks(b2).coreInstructions || '';
-          const coreLen = coreText.length;
-          const coreHash = crypto.createHash('md5').update(coreText).digest('hex').slice(0, 12);
+          // Get file mtime as firstSeen date
+          const stat = config.storage.statShared ? await config.storage.statShared(filename) : null;
+          const firstSeen = stat?.mtime ? stat.mtime.toISOString().slice(0, 10) : null;
           store.versionIndex.set(idxKey, {
             reqId: null, sharedFile: filename, b2Len: b2.length, coreLen, coreHash,
-            firstSeen: filename.slice(4, 14) || '?',
+            firstSeen,
             agentKey, agentLabel, version: ver,
           });
+        } else {
+          if (ver > existing.version) existing.version = ver;
         }
       }
     } catch {}

@@ -181,22 +181,22 @@ const server = http.createServer((clientReq, clientRes) => {
       const liveVer = liveM ? liveM[1] : null;
       const { key: agentKey, label: agentLabel } = extractAgentType(parsedBody.system);
       if (liveVer && b2.length >= 500) {
-        const idxKey = `${agentKey}::${liveVer}`;
-        if (!store.versionIndex.has(idxKey)) {
+        const coreText = splitB2IntoBlocks(b2).coreInstructions || '';
+        const coreLen = coreText.length;
+        const coreHash = crypto.createHash('md5').update(coreText).digest('hex').slice(0, 12);
+        const idxKey = `${agentKey}::${coreHash}`;
+        const existing = store.versionIndex.get(idxKey);
+        if (existing) {
+          // Same coreInstructions, just update to latest cc_version and shared file
+          existing.version = liveVer;
+          if (sysHash) existing.sharedFile = `sys_${sysHash}.json`;
+        } else {
           const now = new Date().toISOString().slice(0, 10);
-          const coreText = splitB2IntoBlocks(b2).coreInstructions || '';
-          const coreLen = coreText.length;
-          const coreHash = crypto.createHash('md5').update(coreText).digest('hex').slice(0, 12);
           const sharedFile = sysHash ? `sys_${sysHash}.json` : null;
           store.versionIndex.set(idxKey, { reqId: null, sharedFile, b2Len: b2.length, coreLen, coreHash, firstSeen: now, agentKey, agentLabel, version: liveVer });
-          // Only notify if coreInstructions actually changed vs previous version
-          const versions = [...store.versionIndex.values()].filter(v => v.agentKey === agentKey && v.version !== liveVer);
-          const prev = versions.length ? versions.sort((a, b) => b.firstSeen.localeCompare(a.firstSeen))[0] : null;
-          const coreChanged = !prev || prev.coreHash !== coreHash;
-          if (coreChanged) {
-            const vData = JSON.stringify({ _type: 'version_detected', version: liveVer, b2Len: b2.length, agentKey, agentLabel });
-            for (const res of store.sseClients) res.write(`data: ${vData}\n\n`);
-          }
+          // Notify dashboard of new unique version
+          const vData = JSON.stringify({ _type: 'version_detected', version: liveVer, b2Len: b2.length, agentKey, agentLabel });
+          for (const res of store.sseClients) res.write(`data: ${vData}\n\n`);
         }
       }
     }
