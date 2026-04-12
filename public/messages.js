@@ -1,5 +1,48 @@
 // ── Messages column helpers ──
 const INJECTED_TAG_RE = /^<(system-reminder|user-prompt-submit-hook|context|antml:function_calls)[^>]*>/;
+
+// ── Credential highlight ──────────────────────────────────────────────
+const CRED_PATTERNS = [
+  /sk-ant-[a-zA-Z0-9_-]{20,}/g,
+  /sk-[a-zA-Z0-9]{20,}/g,
+  /ghp_[a-zA-Z0-9]{36}/g,
+  /AKIA[0-9A-Z]{16}/g,
+  /-----BEGIN (?:RSA|EC|OPENSSH) PRIVATE KEY-----/g,
+];
+
+function highlightCredentials(text) {
+  if (!text) return '';
+  // Collect all match ranges
+  const ranges = [];
+  for (const pat of CRED_PATTERNS) {
+    pat.lastIndex = 0;
+    let m;
+    while ((m = pat.exec(text)) !== null) {
+      ranges.push({ start: m.index, end: m.index + m[0].length });
+    }
+  }
+  if (!ranges.length) return escapeHtml(text);
+
+  // Sort and merge overlapping ranges
+  ranges.sort((a, b) => a.start - b.start);
+  const merged = [ranges[0]];
+  for (let i = 1; i < ranges.length; i++) {
+    const last = merged[merged.length - 1];
+    if (ranges[i].start <= last.end) last.end = Math.max(last.end, ranges[i].end);
+    else merged.push(ranges[i]);
+  }
+
+  // Build highlighted HTML
+  let html = '';
+  let pos = 0;
+  for (const { start, end } of merged) {
+    html += escapeHtml(text.slice(pos, start));
+    html += '<span class="cred-highlight">' + escapeHtml(text.slice(start, end)) + '</span>';
+    pos = end;
+  }
+  html += escapeHtml(text.slice(pos));
+  return html;
+}
 function classifyUserMessage(msg) {
   if (msg.role !== 'user') return null;
   const blocks = Array.isArray(msg.content)
@@ -412,7 +455,7 @@ function renderStepDetailHtml(req, tok) {
     const msg = req?.messages?.[msgIdx];
     return msg ? '<div class="detail-content">' + renderSingleMessage(msg, tok?.perMessage?.[msgIdx], msgIdx) + '</div>' : '<div class="col-empty">No message</div>';
   } else if (step.type === 'assistant-text') {
-    return '<div class="detail-content"><pre>' + escapeHtml(step.text || '') + '</pre></div>';
+    return '<div class="detail-content"><pre>' + highlightCredentials(step.text || '') + '</pre></div>';
   } else if (step.type === 'tool-group') {
     if (subIdx === 999) {
       const durLabel = step.thinkingDuration ? ' · ' + step.thinkingDuration.toFixed(1) + 's' : '';
