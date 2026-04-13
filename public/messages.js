@@ -43,6 +43,17 @@ function highlightCredentials(text) {
   html += escapeHtml(text.slice(pos));
   return html;
 }
+function hasCredential(text) {
+  if (!text) return false;
+  return CRED_PATTERNS.some(p => { p.lastIndex = 0; return p.test(text); });
+}
+function callHasCredential(c) {
+  const r = c.result;
+  if (!r) return false;
+  if (typeof r === 'string') return hasCredential(r);
+  if (Array.isArray(r)) return r.some(b => b.type === 'text' && hasCredential(b.text));
+  return false;
+}
 function classifyUserMessage(msg) {
   if (msg.role !== 'user') return null;
   const blocks = Array.isArray(msg.content)
@@ -414,6 +425,9 @@ function renderStepListHtml(steps, activeStepKey) {
         } else {
           html += '<span style="color:' + (c.isError ? 'var(--red)' : 'var(--dim)') + ';flex-shrink:0">' + (c.isError ? '✗' : '✓') + '</span>';
         }
+        if (!c.pending && callHasCredential(c)) {
+          html += '<span class="cred-badge">⚠ cred</span>';
+        }
         html += '</div>';
         if (c.isError && c.errorSummary) {
           html += '<div style="padding:1px 8px 2px 52px;font-size:10px;color:var(--red)">' + escapeHtml(c.errorSummary.slice(0, 60)) + '</div>';
@@ -426,6 +440,7 @@ function renderStepListHtml(steps, activeStepKey) {
       html += '<div class="tl-step-summary' + aSel + '" data-step="' + si + '" onclick="selectStep(' + si + ')">';
       html += '<div style="color:var(--text);padding:6px 8px;font-size:12px;white-space:normal;line-height:1.5;background:rgba(63,185,80,0.08);border-radius:4px;border-left:2px solid var(--green);margin:4px 0">';
       html += '<span style="font-size:13px">🤖</span> ' + escapeHtml((step.text || '').slice(0, 200));
+      if (hasCredential(step.text)) html += ' <span class="cred-badge">⚠ cred</span>';
       html += '</div>';
       html += '</div>';
     }
