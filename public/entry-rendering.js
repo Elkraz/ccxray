@@ -1,12 +1,22 @@
 // ── Entry rendering ──
 let newTurnCount = 0;
 
+function cleanTitle(raw) {
+  if (!raw) return null;
+  let t = raw
+    .replace(/<[^>]+>/g, '')          // strip XML/HTML tags (<system-reminder>, etc.)
+    .replace(/^\s*[*#\-—=~`]+\s*/g, '') // strip leading markdown symbols
+    .replace(/\s+/g, ' ')
+    .trim();
+  return t.length >= 4 ? t : null;
+}
+
 function formatGap(ms) {
   const s = Math.round(ms / 1000);
   if (s < 60) return s + 's';
   const m = Math.floor(s / 60), rem = s % 60;
-  if (m < 60) return m + 'm' + (rem ? ' ' + rem + 's' : '');
-  return Math.floor(m / 60) + 'h' + (m % 60 ? ' ' + (m % 60) + 'm' : '');
+  if (m < 60) return m + 'm' + (rem ? rem + 's' : '');
+  return Math.floor(m / 60) + 'h' + (m % 60 ? (m % 60) + 'm' : '');
 }
 
 function showNewTurnPill(count) {
@@ -286,10 +296,13 @@ function addEntry(e) {
   }
   let gapMs = null, gapColor = '', gapTitle = '';
   if (prevInSession && e.receivedAt) {
-    const prevEnd = prevInSession.receivedAt + parseFloat(prevInSession.elapsed || 0) * 1000;
-    gapMs = Math.max(0, e.receivedAt - prevEnd);
-    gapColor = gapMs < 5 * 60000 ? 'var(--green)' : gapMs < 60 * 60000 ? 'var(--yellow)' : 'var(--red)';
-    gapTitle = gapMs < 5 * 60000 ? 'Cache likely warm (< 5m)' : gapMs < 60 * 60000 ? 'Default cache expired (5m–1h)' : 'All cache expired (> 1h)';
+    const prevEnd = Number(prevInSession.receivedAt) + parseFloat(prevInSession.elapsed || 0) * 1000;
+    const rawGap = Number(e.receivedAt) - prevEnd;
+    gapMs = Number.isFinite(rawGap) ? Math.max(0, rawGap) : null;
+    if (gapMs !== null) {
+      gapColor = gapMs < 5 * 60000 ? 'var(--green)' : gapMs < 60 * 60000 ? 'var(--yellow)' : 'var(--red)';
+      gapTitle = gapMs < 5 * 60000 ? 'Cache likely warm (< 5m)' : gapMs < 60 * 60000 ? 'Default cache expired (5m–1h)' : 'All cache expired (> 1h)';
+    }
   }
 
   // Compression detection: compare message count AND context tokens vs previous main turn.
@@ -364,8 +377,9 @@ function addEntry(e) {
       costHtml +
     '</div>';
 
-  // Line 2: title (omit if null)
-  const titleLine = e.title ? '<div class="turn-title">' + escapeHtml(e.title) + '</div>' : '';
+  // Line 2: title (omit if null or noise)
+  const cleanedTitle = cleanTitle(e.title);
+  const titleLine = cleanedTitle ? '<div class="turn-title">' + escapeHtml(cleanedTitle) + '</div>' : '';
 
   // Line 3: ctx bar (original segment proportions) + ctx:/hit: labels
   const seg = (tokens, color) => tokens > 0
@@ -400,7 +414,7 @@ function addEntry(e) {
   timeHtml += '<span class="turn-elapsed">dur:' + formatGap(elapsedMs) + thinkSuffix + '</span>';
   let chipsHtml = '';
   for (const n of Object.keys(e.toolCalls || {})) {
-    const cls = n === 'Agent' ? 'tool-chip chip-agent' : 'tool-chip';
+    const cls = 'tool-chip';
     chipsHtml += '<span class="' + cls + '">' + escapeHtml(n.replace(/^mcp__[^_]+__/, '')) + '</span>';
   }
   const secondaryLine = '<div class="turn-secondary">' +

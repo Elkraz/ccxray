@@ -190,7 +190,7 @@
   .turn-item .turn-ctx { margin-top: 4px; }
   /* Line 4: secondary — time + tools */
   .turn-item .turn-secondary { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--dim); margin-top: 3px; }
-  .turn-item .turn-time-row { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+  .turn-item .turn-time-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .turn-item .turn-tools-row { display: flex; flex-wrap: wrap; gap: 3px; }
   .turn-item .turn-elapsed { white-space: nowrap; }
   .turn-item .turn-wait-gap { white-space: nowrap; }
