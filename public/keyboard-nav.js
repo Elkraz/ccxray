@@ -1,7 +1,161 @@
+// ── Command Bar ──────────────────────────────────────────────────────────────
+let _timelineExpanded = localStorage.getItem('kbar-timeline-expanded') !== 'false';
+
+function isEnabled(keyId) {
+  switch (keyId) {
+    case '→-projects':     return projectsMap.size > 0;
+    case '→-sessions':     return selectedSessionId != null || colSessions.querySelectorAll('.session-item').length > 0;
+    case '→-turns':        return selectedTurnIdx >= 0;
+    case '→-sections':     return selectedSection != null;
+    case 'enter-sections': return selectedSection != null;
+    default:               return true;
+  }
+}
+
+function getCmdBarState() {
+  if (_loading) return null;
+  if (typeof activeTab !== 'undefined' && activeTab !== 'dashboard') return null;
+
+  if (isFocusedMode) {
+    if (tlFilterActive) {
+      return { row1: [{ key: 'Esc', label: 'close filter' }], row2: null, row2Visible: false };
+    }
+    if (selectedSection === 'timeline') {
+      const smallScreen = window.innerHeight <= 900;
+      return {
+        row1: [
+          { key: '↑↓', label: 'steps' },
+          { key: '/', label: 'filter' },
+          { key: 'Esc/←', label: 'exit' },
+          { type: 'toggle' },
+        ],
+        row2: [
+          { key: 'e', label: 'next error' },
+          { key: 'E', label: 'prev error' },
+          { key: 't', label: 'thinking' },
+          { key: 'h', label: 'human' },
+          { key: ']', label: 'text' },
+        ],
+        row2Visible: !smallScreen && _timelineExpanded,
+      };
+    }
+    return {
+      row1: [
+        { key: '↑↓', label: 'switch section' },
+        { key: 'Esc/←', label: 'exit' },
+      ],
+      row2: null,
+      row2Visible: false,
+    };
+  }
+
+  const tabKeys = [
+    { key: '1', label: 'Dashboard' },
+    { key: '2', label: 'Usage' },
+    { key: '3', label: 'Sys Prompt' },
+  ];
+
+  if (focusedCol === 'projects') {
+    return {
+      row1: [
+        { key: '↑↓', label: 'select', id: '↑↓-projects' },
+        { key: '→', label: 'open', id: '→-projects' },
+        ...tabKeys,
+      ],
+      row2: null, row2Visible: false,
+    };
+  }
+  if (focusedCol === 'sessions') {
+    return {
+      row1: [
+        { key: '↑↓', label: 'select' },
+        { key: '←', label: 'back' },
+        { key: '→', label: 'open', id: '→-sessions' },
+        ...tabKeys,
+      ],
+      row2: null, row2Visible: false,
+    };
+  }
+  if (focusedCol === 'turns') {
+    return {
+      row1: [
+        { key: '↑↓', label: 'select' },
+        { key: '←', label: 'back' },
+        { key: '→', label: 'sections', id: '→-turns' },
+        { key: 'Enter', label: 'focus' },
+        ...tabKeys,
+      ],
+      row2: null, row2Visible: false,
+    };
+  }
+  if (focusedCol === 'sections') {
+    return {
+      row1: [
+        { key: '↑↓', label: 'select' },
+        { key: '←', label: 'back' },
+        { key: 'Enter', label: 'focus detail', id: 'enter-sections' },
+        ...tabKeys,
+      ],
+      row2: null, row2Visible: false,
+    };
+  }
+  return null;
+}
+
+function renderCmdBar() {
+  const bar = document.getElementById('cmd-bar');
+  const row1 = document.getElementById('cmd-bar-row1');
+  const row2 = document.getElementById('cmd-bar-row2');
+  if (!bar || !row1 || !row2) return;
+
+  const state = getCmdBarState();
+  if (!state) { bar.className = 'hidden'; return; }
+
+  // Overlay check (use getComputedStyle to catch both inline and class-based display)
+  const overlayActive = [...document.querySelectorAll('[data-hides-cmdbar]')].some(el =>
+    window.getComputedStyle(el).display !== 'none'
+  );
+  bar.className = overlayActive ? 'overlay-active' : '';
+
+  function buildRow(items) {
+    if (!items) return '';
+    return items.map(item => {
+      if (item.type === 'toggle') {
+        const label = _timelineExpanded ? 'less ∧' : 'more ∨';
+        const ariaLabel = _timelineExpanded ? 'collapse timeline shortcuts' : 'expand timeline shortcuts';
+        return `<button class="cmd-toggle" tabindex="-1" aria-label="${ariaLabel}" aria-expanded="${_timelineExpanded}" onclick="(function(){_timelineExpanded=!_timelineExpanded;localStorage.setItem('kbar-timeline-expanded',_timelineExpanded);renderCmdBar();})()">${label}</button>`;
+      }
+      const enabled = item.id ? isEnabled(item.id) : true;
+      const cls = enabled ? 'cmd-key' : 'cmd-key disabled';
+      return `<span class="${cls}"><kbd>${item.key}</kbd> ${item.label}</span>`;
+    }).join('<span class="cmd-sep">·</span>');
+  }
+
+  row1.innerHTML = buildRow(state.row1);
+  row2.innerHTML = buildRow(state.row2);
+  row2.classList.toggle('visible', !!state.row2Visible);
+}
+
+// ── Keyboard shortcuts overlay ──
+function toggleKbdOverlay() {
+  const el = document.getElementById('kbd-overlay');
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+  renderCmdBar();
+}
+
 // ── Keyboard navigation ──
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   const key = e.key;
+
+  // kbd overlay: ? to open, Escape to close (highest priority after input guard)
+  const kbdOverlay = document.getElementById('kbd-overlay');
+  if (kbdOverlay && kbdOverlay.style.display !== 'none') {
+    if (key === 'Escape' || key === '?') { toggleKbdOverlay(); e.preventDefault(); return; }
+    return; // swallow all keys while overlay is open
+  }
+  if (key === '?') { toggleKbdOverlay(); e.preventDefault(); return; }
 
   // Tab switching: 1=Dashboard, 2=Usage, 3=System Prompt
   const tabMap = { '1': 'dashboard', '2': 'usage', '3': 'sysprompt' };
@@ -69,20 +223,27 @@ document.addEventListener('keydown', (e) => {
   if (key === 'Enter' && focusedCol === 'sections' && selectedSection) { enterFocusedMode(); e.preventDefault(); return; }
   // T11: open filter in non-focused timeline view
   if (key === '/' && selectedSection === 'timeline') { openTlFilter(); e.preventDefault(); return; }
+  // Escape in main mode → move left one column
+  if (key === 'Escape') {
+    const leftOf = { sessions: 'projects', turns: 'sessions', sections: 'turns' };
+    if (leftOf[focusedCol]) { setFocus(leftOf[focusedCol]); e.preventDefault(); }
+    return;
+  }
   if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) return;
   e.preventDefault();
 
   if (focusedCol === 'projects') {
     if (key === 'ArrowRight') { setFocus('sessions'); return; }
     if (key === 'ArrowUp' || key === 'ArrowDown') {
-      // Build list from visible DOM items to respect active filter and sort order
-      const projItems = [null, ...[...colProjects.querySelectorAll('.project-item')].map(el => {
+      const projItems = [...colProjects.querySelectorAll('.project-item')].map(el => {
         const m = el.getAttribute('onclick')?.match(/selectProject\((.+)\)/);
         if (m) try { return JSON.parse(m[1].replace(/&quot;/g, '"')); } catch(e) {}
         return null;
-      }).filter(n => n !== null)];
+      }).filter(n => n !== null);
+      if (!projItems.length) return;
       const cur = projItems.indexOf(selectedProjectName);
-      const next = Math.max(0, Math.min(projItems.length - 1, cur + (key === 'ArrowDown' ? 1 : -1)));
+      const effectiveCur = cur === -1 ? (key === 'ArrowDown' ? -1 : 0) : cur;
+      const next = Math.max(0, Math.min(projItems.length - 1, effectiveCur + (key === 'ArrowDown' ? 1 : -1)));
       if (next === cur) return;
       selectProject(projItems[next]);
     }
@@ -116,6 +277,7 @@ document.addEventListener('keydown', (e) => {
       selectSection(sectionNames[next]);
     }
   }
+  renderCmdBar();
 });
 
 // ── T11: Timeline Filter Bar ──────────────────────────────────────────────────
@@ -147,6 +309,7 @@ function openTlFilter() {
     ev.stopPropagation();
   };
   applyTlFilter();
+  renderCmdBar();
 }
 
 function closeTlFilter() {
@@ -155,6 +318,7 @@ function closeTlFilter() {
   const bar = document.getElementById('tl-filter-bar');
   if (bar) bar.style.display = 'none';
   applyTlFilter();
+  renderCmdBar();
 }
 
 function applyTlFilter() {
