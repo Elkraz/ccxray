@@ -121,6 +121,13 @@ function resolveProxyAgent(protocol, env) {
   return createTunnelAgent(proxyUrl);
 }
 
+// ── Model name prefix rewriting ──────────────────────────────────────
+function applyModelPrefix(parsedBody, prefix) {
+  if (!prefix || !parsedBody?.model || parsedBody.model.startsWith(prefix)) return false;
+  parsedBody.model = prefix + parsedBody.model;
+  return true;
+}
+
 // ── Strip injected proxy stats from conversation history ─────────────
 const STATS_PATTERN = /\n\n---\n📊 Context: .+$/s;
 
