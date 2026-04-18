@@ -25,13 +25,31 @@ describe('system-prompt', () => {
       assert.equal(extractAgentType(sys).key, 'claude-code');
     });
 
-    it('detects Claude Code from b1 fallback', () => {
-      const sys = [
+    it('uses b1 identity only when b2 is empty', () => {
+      // B1 is branding shared by every sub-agent — only trust it as identity
+      // when B2 has no content (short-form prompt variant).
+      const shortForm = [
+        { text: 'billing' },
+        { text: 'You are Claude Code, ...' },
+        { text: '' },
+      ];
+      assert.equal(extractAgentType(shortForm).key, 'claude-code');
+
+      const sdkShortForm = [
+        { text: 'billing' },
+        { text: "You are a Claude agent, built on Anthropic's Claude Agent SDK." },
+        { text: '' },
+      ];
+      assert.equal(extractAgentType(sdkShortForm).key, 'sdk-agent');
+
+      // When B2 has content, the sub-agent must NOT fall back to claude-code
+      // just because B1 says "You are Claude Code…" — that branding is shared.
+      const subAgent = [
         { text: 'billing' },
         { text: 'You are Claude Code, ...' },
         { text: 'Some other text' },
       ];
-      assert.equal(extractAgentType(sys).key, 'claude-code');
+      assert.notEqual(extractAgentType(subAgent).key, 'claude-code');
     });
 
     it('detects general-purpose subagent', () => {
