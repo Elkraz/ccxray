@@ -30,8 +30,10 @@ function extractAgentType(sys) {
     if (b2.startsWith(a.prefix)) return { key: a.key, label: a.label };
   }
 
-  // Fallback: older versions put the identity in b1
-  if (b1.startsWith('You are Claude Code')) return { key: 'claude-code', label: 'Claude Code' };
+  // Short-form prompt (no B2): trust B1 identity only when B2 is absent.
+  // Current Claude Code keeps B1 = "You are Claude Code…" branding for every
+  // sub-agent, so B1 is NOT a reliable signal when B2 has content.
+  if (!b2 && b1.startsWith('You are Claude Code')) return { key: 'claude-code', label: 'Claude Code' };
 
   // Regex fallback for unknown future agent types
   const m = b2.match(/^You are (?:a |an |the )?(.+?)(?:\s+for\s|\s+that\s|\s+specializ|\s*[,.]|\n)/i);
