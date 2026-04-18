@@ -34,10 +34,15 @@ const TRUTH_TABLE = [
 ];
 
 function truthLabel(sys) {
-  if (!Array.isArray(sys) || sys.length < 3) return 'unknown';
+  if (!Array.isArray(sys) || sys.length < 2) return 'unknown';
+  const b1 = (sys[1]?.text || '').trim();
   const b2 = (sys[2]?.text || '').trim();
-  if (!b2) return 'unknown';
-  for (const t of TRUTH_TABLE) if (b2.startsWith(t.prefix)) return t.key;
+  if (b2) {
+    for (const t of TRUTH_TABLE) if (b2.startsWith(t.prefix)) return t.key;
+    return 'unknown';
+  }
+  if (b1.startsWith('You are Claude Code')) return 'claude-code';
+  if (b1.startsWith('You are a Claude agent, built on Anthropic')) return 'sdk-agent';
   return 'unknown';
 }
 
