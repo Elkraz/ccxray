@@ -20,6 +20,9 @@ const KNOWN_AGENTS = [
   { prefix: 'Generate a short kebab-case name',            key: 'name-generator',    label: 'Name Generator' },
   { prefix: 'You are a software architect and planning',   key: 'plan',              label: 'Plan' },
   { prefix: 'You are a thin forwarding wrapper around the Codex', key: 'codex-rescue', label: 'Codex Rescue' },
+  { prefix: 'You are the Claude guide agent',              key: 'claude-code-guide', label: 'Claude Code Guide' },
+  { prefix: 'You are a helpful AI assistant tasked with summarizing', key: 'summarizer', label: 'Summarizer' },
+  { prefix: 'You are a translator',                        key: 'translator',        label: 'Translator' },
 ];
 
 function extractAgentType(sys) {
