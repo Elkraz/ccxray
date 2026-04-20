@@ -108,20 +108,20 @@
 
 ### 5.5.1 Passive layer（所有方案，零 permission）
 
-- [ ] 5.5.1.1 Tab title flash：`document.title = '⚠ ccxray'` 當任一 active session cache < 30s
-- [ ] 5.5.1.2 Session card border animation via CSS `@keyframes`
-- [ ] 5.5.1.3 離開「緊迫」狀態時還原 title
+- [x] 5.5.1.1 Tab title flash：`document.title` 在 `⚠ ccxray` 與 `ccxray` 間切換，當任一 active session cache < 60s
+- [x] 5.5.1.2 `.cache-close` CSS `cachePulse` 動畫 (Phase 5 已提供)
+- [x] 5.5.1.3 離開「緊迫」狀態時還原 title 至 `ccxray`
 
 ### 5.5.2 Active layer（Max 預設 on / Pro opt-in）
 
-- [ ] 5.5.2.1 `public/cache-notify.js` 新檔
-- [ ] 5.5.2.2 讀 settings.plan 決定 default（max → enabled）
-- [ ] 5.5.2.3 Lead time：max=5min、pro/api-key=60s
-- [ ] 5.5.2.4 Permission request：使用者 toggle 時才觸發（不在 startup）
-- [ ] 5.5.2.5 Dedupe：`notifiedCycles: Set<sessionId + lastReceivedAt>`，同 cycle 不重複
-- [ ] 5.5.2.6 Settings 顯示當前開關狀態 + `Notifications: on (Max default)`
-- [ ] 5.5.2.7 `CCXRAY_CACHE_NOTIFY=on|off` env 覆寫
-- [ ] 5.5.2.8 Permission denied → 靜默 fallback 到 Layer 1
+- [x] 5.5.2.1 `public/cache-notify.js` 新檔
+- [x] 5.5.2.2 讀 `settings.plan` 決定 default（max5x/max20x → enabled，其他 → disabled）
+- [x] 5.5.2.3 Lead time：max=5min、pro/api-key=60s
+- [x] 5.5.2.4 Permission request：使用者 toggle 時才觸發（不在 startup）
+- [x] 5.5.2.5 Dedupe：`_notifiedCycles Map<sessionId, lastReceivedAt>`，同 cycle 不重複
+- [x] 5.5.2.6 Topbar 🔔/🔕 button 顯示當前狀態 + tooltip
+- [ ] 5.5.2.7 `CCXRAY_CACHE_NOTIFY=on|off` env 覆寫（延後，localStorage 先夠用）
+- [x] 5.5.2.8 Permission denied → `qt-notify.denied` class, tooltip 提示，無 Layer 2 fire
 
 ## Phase 6 — Cross-Level Visual Harmonization
 
