@@ -1,8 +1,8 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveProxyAgent, applyModelPrefix } = require('../server/forward');
+const { resolveProxyAgent, applyModelPrefix, stripInjectedStats, setStatusLineEnabled, getStatusLineEnabled } = require('../server/forward');
 
 describe('resolveProxyAgent', () => {
   it('returns null when no proxy env vars are set', () => {
@@ -54,5 +54,75 @@ describe('applyModelPrefix', () => {
 
   it('returns false when parsedBody has no model', () => {
     assert.equal(applyModelPrefix({}, 'databricks-'), false);
+  });
+});
+
+describe('stripInjectedStats', () => {
+  it('removes the status line from the last assistant text block', () => {
+    const body = {
+      messages: [{
+        role: 'assistant',
+        content: [{ type: 'text', text: 'Hello world\n\n---\n📊 Context: 10.0% (20,000 / 200,000) | 20,000 in + 5 out' }],
+      }],
+    };
+    assert.equal(stripInjectedStats(body), true);
+    assert.equal(body.messages[0].content[0].text, 'Hello world');
+  });
+
+  it('removes the block entirely when only the status line remains', () => {
+    const body = {
+      messages: [{
+        role: 'assistant',
+        content: [{ type: 'text', text: '\n\n---\n📊 Context: 10.0% (20,000 / 200,000) | 20,000 in + 5 out' }],
+      }],
+    };
+    assert.equal(stripInjectedStats(body), true);
+    assert.equal(body.messages[0].content.length, 0);
+  });
+
+  it('leaves messages without a status line untouched', () => {
+    const body = {
+      messages: [{
+        role: 'assistant',
+        content: [{ type: 'text', text: 'No stats here' }],
+      }],
+    };
+    assert.equal(stripInjectedStats(body), false);
+    assert.equal(body.messages[0].content[0].text, 'No stats here');
+  });
+
+  it('ignores non-assistant messages', () => {
+    const body = {
+      messages: [{
+        role: 'user',
+        content: [{ type: 'text', text: 'Hello\n\n---\n📊 Context: 10.0% (20,000 / 200,000) | 20,000 in + 5 out' }],
+      }],
+    };
+    assert.equal(stripInjectedStats(body), false);
+    assert.ok(body.messages[0].content[0].text.includes('📊'));
+  });
+
+  it('returns false when messages is absent', () => {
+    assert.equal(stripInjectedStats({}), false);
+    assert.equal(stripInjectedStats(null), false);
+  });
+});
+
+describe('statusLineEnabled flag', () => {
+  beforeEach(() => setStatusLineEnabled(true));
+
+  it('defaults to true', () => {
+    assert.equal(getStatusLineEnabled(), true);
+  });
+
+  it('setStatusLineEnabled(false) disables the flag', () => {
+    setStatusLineEnabled(false);
+    assert.equal(getStatusLineEnabled(), false);
+  });
+
+  it('setStatusLineEnabled(true) re-enables the flag', () => {
+    setStatusLineEnabled(false);
+    setStatusLineEnabled(true);
+    assert.equal(getStatusLineEnabled(), true);
   });
 });
