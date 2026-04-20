@@ -289,12 +289,13 @@
   #scroll-toggle .scroll-on.active { color: var(--green); background: rgba(63,185,80,0.15); }
   #scroll-toggle .scroll-off.active { color: var(--red); background: rgba(248,81,73,0.15); }
   #session-tool-bar { padding: 4px 10px; font-size: 10px; color: var(--dim); border-bottom: 1px solid var(--border); display: flex; flex-wrap: nowrap; gap: 4px; align-items: center; overflow: hidden; white-space: nowrap; }
-  .turn-ctx-bar { margin-top: 3px; position: relative; }
+  .turn-ctx-bar { margin-top: 3px; }
   .turn-ctx-bar-bg { height: 3px; border-radius: 1.5px; background: var(--border); overflow: visible; display: flex; position: relative; }
-  /* Cross-level auto-compact landmark (see design D10). Tick height exceeds bar
-     so it stays visible above the 3px color segments. L2 keeps its own per-turn
-     color thresholds (D11) — this is just the shared visual landmark. */
-  .turn-ctx-bar::after {
+  /* Cross-level auto-compact landmark (see design D10). Tick sits on the 3px
+     bar itself — not on the wrapper — so it doesn't extend across the
+     hit:/ctx: label row below. L2 keeps its own per-turn color thresholds
+     (D11). Tick height 5px (1 above + 3 bar + 1 below). */
+  .turn-ctx-bar-bg::after {
     content: '';
     position: absolute;
     left: var(--compact-threshold);
@@ -302,6 +303,20 @@
     width: 1px;
     background: var(--dim);
     opacity: 0.7;
+    pointer-events: none;
+  }
+  /* L3 big context-breakdown bar (turn detail header + sticky) — shares the
+     same landmark tick as L1/L2. Bar uses overflow:visible so tick extends
+     slightly above/below for visibility. */
+  .ctx-big-bar { position: relative; }
+  .ctx-big-bar::after {
+    content: '';
+    position: absolute;
+    left: var(--compact-threshold);
+    top: -2px; bottom: -2px;
+    width: 1px;
+    background: var(--text);
+    opacity: 0.45;
     pointer-events: none;
   }
   .turn-ctx-labels { display: flex; font-size: 9px; margin-top: 1px; line-height: 1; }
