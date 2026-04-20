@@ -472,7 +472,7 @@ function renderSessionItem(sess, sid) {
     '<button class="' + sdotClasses + '"' + (sdotTitle ? ' title="' + sdotTitle + '"' : '') + (sdotOnclick ? ' onclick="' + sdotOnclick + '"' : '') + ' tabindex="-1"></button>' +
     '<span class="sid">' + escapeHtml(shortSid) + '</span>' +
     pinBtn +
-    '<button class="launch-btn" onclick="event.stopPropagation();copyLaunchCmd(&quot;' + escapeHtml(sid) + '&quot;,this)" title="Copy launch cmd">&#8855;</button>' +
+    '<button class="launch-btn" onclick="event.stopPropagation();copyLaunchCmd(&quot;' + escapeHtml(sid) + '&quot;,this)" title="Copy command to resume this session">&#10697;</button>' +
     heldHtml +
     '</div>' +
     '<div class="si-row2">' + escapeHtml(shortModel) + ' · ' + sess.count + 't · <span class="si-cost">' + escapeHtml(costStr) + '</span></div>' +
