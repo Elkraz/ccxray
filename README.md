@@ -5,9 +5,9 @@
 X-ray vision for AI agent sessions. A zero-config HTTP proxy that records every API call between Claude Code and Anthropic, with a real-time dashboard to inspect what's actually happening inside your agent.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
-[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
+[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/hesreallyhim/awesome-claude-code)
 
-![ccxray dashboard](https://raw.githubusercontent.com/lis186/ccxray/main/docs/dashboard.png)
+![ccxray dashboard](docs/dashboard.png)
 
 ## Why
 
@@ -35,7 +35,7 @@ ccxray claude --continue         # All claude args pass through
 ccxray --port 8080 claude        # Custom port (independent, no hub sharing)
 ccxray claude --no-browser       # Skip auto-open browser
 ccxray status                    # Show hub info and connected clients
-ANTHROPIC_BASE_URL=http://localhost:5577 claude   # Manual setup (existing sessions)
+ANTHROPIC_BASE_URL=http://localhost:5577 claude   # Point existing claude session at a running ccxray hub
 ```
 
 ### Multi-project
@@ -56,7 +56,7 @@ If the hub process crashes, connected clients automatically recover within secon
 
 ```bash
 $ ccxray status
-Hub: http://localhost:5577 (pid 12345, uptime 3600s, v1.1.0)
+Hub: http://localhost:5577 (pid 12345, uptime 3600s, v1.6.0)
 Connected clients (2):
   [1] pid 23456 — ~/dev/project-a
   [2] pid 34567 — ~/dev/project-b
@@ -70,25 +70,35 @@ Use `--port` to opt out and run an independent server instead.
 
 Watch your agent think in real-time. Every turn renders as a five-line card: cost on line 1, cache warmth (with inter-turn gap timing to catch cache misses), tool-fail risk, `hit:0%` red warnings, and tools surfaced above the title. Scan a whole session's health without expanding a single card.
 
-![Timeline view](https://raw.githubusercontent.com/lis186/ccxray/main/docs/timeline.png)
+![Timeline view](docs/timeline.png)
 
 ### Usage & Cost
 
 Track your real spending. Session heatmap, burn rate, ROI calculator — know exactly where your tokens go.
 
-![Usage analytics](https://raw.githubusercontent.com/lis186/ccxray/main/docs/usage.png)
+![Usage analytics](docs/usage.png)
 
 ### System Prompt Tracking
 
 Automatic version detection with diff viewer. Browse prompts across 12 recognized agent types — Orchestrator, General Purpose, Plan, Explore, Web Search, Codex Rescue, Claude Code Guide, Summarizer, Title Generator, Name Generator, Translator, SDK Agent — and see exactly what changed between updates. Precision-verified against 12,730 captured prompts: 100% of classifications are correct, uncertain prompts are honestly marked `unknown`.
 
-![System prompt tracking](https://raw.githubusercontent.com/lis186/ccxray/main/docs/system-prompt.png)
+![System prompt tracking](docs/system-prompt.png)
 
 ### Keyboard-first Navigation
 
 Drive the whole dashboard with your keyboard. Every screen shows a context-sensitive hint bar at the bottom — the currently valid shortcuts, live-updated as you move. Press `?` for the full cheatsheet. Navigate projects → sessions → turns → sections → timeline → individual diff hunks without touching the mouse.
 
-![Keyboard navigation](https://raw.githubusercontent.com/lis186/ccxray/main/docs/keyboard.png)
+![Keyboard navigation](docs/keyboard.png)
+
+### Session Titles & Cache Alerts
+
+Session cards show Claude Code's generated titles (e.g. `Fix login button on mobile`) instead of raw hashes, with a live cache TTL countdown (`cache 4m left`) that pulses red under 1 minute. When any session nears expiry, the browser tab alternates between `ccxray` and `⚠ ccxray`. Opt-in browser notification fires at a plan-aware lead time — 5 minutes for Max, 60 seconds for Pro/API key. Titles fall back to the short hash for direct-API traffic or sessions still in flight.
+
+![Session titles and cache expiry alerts](docs/cache-expiry.png)
+
+### Plan Detection
+
+ccxray auto-detects your subscription plan (Pro vs Max 5x vs Max 20x) by reading Anthropic's `cache_creation` usage fields — no configuration needed. Topbar shows `Plan: Max 5x · TTL 1h (auto)`. ROI calculations and quota panel use the detected plan. Override with `CCXRAY_PLAN` if auto-detection gets it wrong.
 
 ### More
 
@@ -107,7 +117,7 @@ Claude Code  ──►  ccxray (:5577)  ──►  api.anthropic.com (or ANTHROP
                   Dashboard (same port)
 ```
 
-ccxray is a transparent HTTP proxy. It forwards requests to Anthropic unchanged, records both request and response as JSON files, and serves a web dashboard on the same port. No API key needed — it passes through whatever Claude Code sends.
+ccxray is a transparent HTTP proxy. It forwards requests to Anthropic, records both request and response as JSON files, and serves a web dashboard on the same port. No API key needed — it passes through whatever Claude Code sends.
 
 ## Configuration
 
@@ -127,7 +137,11 @@ ccxray is a transparent HTTP proxy. It forwards requests to Anthropic unchanged,
 | `AUTH_TOKEN` | _(none)_ | API key for access control (disabled when unset) |
 | `CCXRAY_HOME` | `~/.ccxray` | Base directory for hub lockfile, logs, and hub.log |
 | `CCXRAY_MAX_ENTRIES` | `5000` | Max in-memory entries (oldest evicted; disk logs unaffected) |
-| `ANTHROPIC_BASE_URL` | — | Custom upstream Anthropic endpoint (e.g. a corporate gateway). ccxray reads this at startup and forwards to it instead of `api.anthropic.com`. `ANTHROPIC_TEST_*` take precedence when set. |
+| `CCXRAY_PLAN` | _(auto)_ | Override plan detection: `pro`, `max5x`, `max20x`, `api-key` |
+| `CCXRAY_DISABLE_TITLES` | _(unset)_ | Set to `1` to disable session title extraction (sessions fall back to short hash) |
+| `CCXRAY_MODEL_PREFIX` | _(unset)_ | Prepend a string to the model name before forwarding (e.g. `databricks-`). Useful when the upstream requires a vendor-prefixed model name but Claude Code only accepts standard names. |
+| `HTTPS_PROXY` / `https_proxy` | _(unset)_ | Route outbound HTTPS traffic through a corporate proxy via HTTP CONNECT tunnel. |
+| `ANTHROPIC_BASE_URL` | — | Custom upstream Anthropic endpoint (e.g. a corporate gateway). Supports base paths — `https://host/serving-endpoints/anthropic` works as-is. `ANTHROPIC_TEST_*` take precedence when set. |
 
 Logs are stored in `~/.ccxray/logs/` as `{timestamp}_req.json` and `{timestamp}_res.json`. Upgrading from v1.0? Logs previously in `./logs/` are automatically migrated on first run.
 

@@ -1,17 +1,5 @@
 # Changelog
 
-## Unreleased
-
-### Added
-
-- **Sessions column shows Claude Code's generated title.** Each session card now displays the human-readable title from Claude Code's title-generator subagent (e.g. `Fix login button on mobile`) instead of the 8-character hash. Card wraps to at most two lines; the short hash moves to the hover tooltip and is still accessible via the copy button and URL deep-link (`?s=`). Breadcrumb and intercept overlay follow the same rule. Sessions without a title (direct-api traffic, legacy sessions, title-gen still in flight) fall back to the short hash exactly as before.
-- **Title-gen JSON parsing fix.** `extractResponseTitle` previously returned the raw JSON envelope (`{"title":"..."}`) for title-generator responses. New `extractTitleGenPayload` helper parses defensively — JSON first, regex fallback for truncated streams, null on total failure.
-- **Attribution model for sessionless sub-agent calls.** Title-generator requests carry no `session_id` in metadata. ccxray now matches them to their parent session by temporal proximity (inflight session started within 1s) confirmed by content equality (first user message equals the title-gen request body). Ambiguous matches — e.g. two concurrent sessions with byte-identical first messages — are discarded rather than guessed.
-- **Title persistence across restart.** The existing `index.ndjson` per-turn title column is reused: title-gen entries now store the extracted clean title, and `restore.js` replays them onto `sess.title` on startup with zero extra I/O.
-- **Kill switch.** Set `CCXRAY_DISABLE_TITLES=1` to disable title extraction entirely — every session falls back to the short hash.
-
-Full decision trail and tests: [`openspec/changes/session-title-display/`](openspec/changes/session-title-display/).
-
 ## 1.6.0
 
 ### Breaking
@@ -34,6 +22,18 @@ Full decision trail and tests: [`openspec/changes/session-title-display/`](opens
 
 - **Rate-limit header persistence** (`server/ratelimit-log.js`): `anthropic-ratelimit-*` response headers are appended to `~/.ccxray/ratelimit-samples.jsonl` (deduped per model) for future calibration of plan-specific token quotas. Analyse with `node scripts/analyze-ratelimit-samples.mjs`.
 
+**Session identification**
+
+- **Sessions column shows Claude Code's generated title.** Each session card now displays the human-readable title from Claude Code's title-generator subagent (e.g. `Fix login button on mobile`) instead of the 8-character hash. Card wraps to at most two lines; the short hash moves to the hover tooltip and is still accessible via the copy button and URL deep-link (`?s=`). Breadcrumb and intercept overlay follow the same rule. Sessions without a title (direct-api traffic, legacy sessions, title-gen still in flight) fall back to the short hash exactly as before.
+- **Title persistence across restart.** Title-gen entries store the extracted clean title in the existing `index.ndjson` per-turn column; `restore.js` replays them onto `sess.title` on startup with zero extra I/O.
+- **Kill switch.** Set `CCXRAY_DISABLE_TITLES=1` to disable title extraction entirely.
+
+**Corporate proxy and custom upstream support** (contributed by @jspelletier)
+
+- **HTTPS CONNECT tunnel**: Set `HTTPS_PROXY` or `https_proxy` to route outbound traffic through a corporate proxy. Node.js ignores these variables natively for `https.request`; ccxray now wires up an HTTP CONNECT tunnel agent automatically.
+- **Base path support for `ANTHROPIC_BASE_URL`**: Paths were previously discarded, causing 404s on upstreams with a base path (e.g. Databricks `/serving-endpoints/anthropic`). The full URL path is now preserved and prepended to every forwarded request.
+- **Model name prefix rewriting** (`CCXRAY_MODEL_PREFIX`): Some upstreams (e.g. Databricks) require a vendor-prefixed model name (`databricks-claude-sonnet-4-6`), but Claude Code's client-side validation rejects non-standard names. Setting `CCXRAY_MODEL_PREFIX=databricks-` lets the proxy transparently rewrite the model field before forwarding.
+
 **Other improvements**
 
 - **Turn Card 5-layer redesign**: Each timeline entry now shows a five-line card with cost on line 1, cache warmth + inter-turn gap timing, tool-fail risk signal, `hit:0%` red warning, and tools surfaced above the title. Scan a whole session's health without expanding detail.
@@ -51,9 +51,13 @@ Full decision trail and tests: [`openspec/changes/session-title-display/`](opens
 
 - **Historical sessions dim**: L1 session cards older than 1 hour since last turn no longer light up red/yellow regardless of ctx%. Badge renders as dim grey at the same ≥75% threshold so you still see where the session landed without the urgency coloring drowning the live list.
 
+- **Session card layout**: cost bar moved below the context bar, cache countdown and inter-turn timing consolidated onto one row. Short session ID always visible; title renders as an optional second line when available.
+
 ### Fixed
 
 - **Sub-agents no longer mis-labelled as Claude Code**: Previously, Plan / Codex Rescue / Summarizer / Claude Code Guide sessions were silently grouped with the main "Claude Code" agent because detection relied on a branding line that every sub-agent shares. They now classify into their own buckets with separate version histories and diffs. Claude Agent SDK callers also surface as a distinct `sdk-agent` class.
+
+- **Phantom sessions in multi-project concurrent use**: When two `ccxray claude` instances started within milliseconds of each other, the second session could inherit the first session's ID before its own metadata arrived. Fixed by tightening the session-assignment window and requiring explicit session confirmation before attribution.
 
 - **Copy-launch button icon was misleading**: the session card's "copy launch command" button was rendered as ⊗ (U+2297 CIRCLED TIMES), which universally reads as delete / close. The button only copied a shell command to clipboard; clicking it never removed anything. Replaced with ⧉ (U+29C9 TWO JOINED SQUARES, the standard copy glyph), and the tooltip now reads "Copy command to resume this session" so the clipboard content's purpose is explicit. Also fixed a long-standing inconsistency where the post-click state used a different icon than the initial render.
 

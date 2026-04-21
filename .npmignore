@@ -13,3 +13,10 @@ Dockerfile
 *.log
 pricing-cache.json
 logs/
+dogfood-output/
+.agents/
+skills-lock.json
+ccxray-init.png
+--full-page
+--output
+--selector

@@ -77,56 +77,8 @@ function applyModelPrefix(parsedBody, prefix) {
   return true;
 }
 
-// ── HTTPS CONNECT tunnel agent for corporate proxies ─────────────────
-
-function createTunnelAgent(proxyUrl) {
-  const proxy = new URL(proxyUrl);
-  const proxyHost = proxy.hostname;
-  const proxyPort = parseInt(proxy.port) || 3128;
-
-  const agent = new https.Agent({ keepAlive: false });
-
-  agent.createConnection = function(options, callback) {
-    const connectReq = http.request({
-      host: proxyHost,
-      port: proxyPort,
-      method: 'CONNECT',
-      path: `${options.host}:${options.port || 443}`,
-      headers: { Host: `${options.host}:${options.port || 443}` },
-    });
-
-    connectReq.on('connect', (res, socket) => {
-      if (res.statusCode !== 200) {
-        socket.destroy();
-        return callback(new Error(`Proxy CONNECT failed: ${res.statusCode} ${res.statusMessage}`));
-      }
-      const tlsOpts = { socket, servername: options.servername || options.host };
-      if (options.rejectUnauthorized !== undefined) tlsOpts.rejectUnauthorized = options.rejectUnauthorized;
-      const tlsSocket = tls.connect(tlsOpts, () => callback(null, tlsSocket));
-      tlsSocket.on('error', callback);
-    });
-
-    connectReq.on('error', callback);
-    connectReq.end();
-  };
-
-  agent._proxyUrl = proxyUrl;
-  return agent;
-}
-
-function resolveProxyAgent(protocol, env) {
-  if (protocol !== 'https') return null;
-  const proxyUrl = env.HTTPS_PROXY || env.https_proxy;
-  if (!proxyUrl) return null;
-  return createTunnelAgent(proxyUrl);
-}
-
-// ── Model name prefix rewriting ──────────────────────────────────────
-function applyModelPrefix(parsedBody, prefix) {
-  if (!prefix || !parsedBody?.model || parsedBody.model.startsWith(prefix)) return false;
-  parsedBody.model = prefix + parsedBody.model;
-  return true;
-}
+// Tunnel agent is module-level so the connection pool is reused across requests.
+const TUNNEL_AGENT = resolveProxyAgent(config.ANTHROPIC_PROTOCOL, process.env);
 
 // ── Strip injected proxy stats from conversation history ─────────────
 const STATS_PATTERN = /\n\n---\n📊 Context: .+$/s;
@@ -159,12 +111,11 @@ function forwardRequest(ctx) {
   const bodyToSend = (ctx.bodyModified || statsStripped || modelPrefixed) ? Buffer.from(JSON.stringify(parsedBody)) : rawBody;
 
   const transport = config.ANTHROPIC_PROTOCOL === 'http' ? http : https;
-  const tunnelAgent = resolveProxyAgent(config.ANTHROPIC_PROTOCOL, process.env);
   const proxyReq = transport.request({
     hostname: config.ANTHROPIC_HOST, port: config.ANTHROPIC_PORT,
     path: config.ANTHROPIC_BASE_PATH + clientReq.url, method: clientReq.method,
     headers: { ...fwdHeaders, 'content-length': bodyToSend.length },
-    ...(tunnelAgent ? { agent: tunnelAgent } : {}),
+    ...(TUNNEL_AGENT ? { agent: TUNNEL_AGENT } : {}),
   }, (proxyRes) => {
     const isSSE = (proxyRes.headers['content-type'] || '').includes('text/event-stream');
 

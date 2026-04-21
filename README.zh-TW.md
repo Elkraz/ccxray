@@ -5,9 +5,9 @@
 AI 代理工作階段的透視鏡。零設定的 HTTP 代理，記錄 Claude Code 與 Anthropic API 之間的每一次呼叫，搭配即時儀表板，讓你看清代理內部到底在做什麼。
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
-[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
+[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/hesreallyhim/awesome-claude-code)
 
-![ccxray 儀表板](https://raw.githubusercontent.com/lis186/ccxray/main/docs/dashboard.png)
+![ccxray 儀表板](docs/dashboard.png)
 
 ## 為什麼需要
 
@@ -35,7 +35,7 @@ ccxray claude --continue         # 所有 claude 參數直接穿透
 ccxray --port 8080 claude        # 自訂 port（獨立模式，不共用 hub）
 ccxray claude --no-browser       # 不自動開啟瀏覽器
 ccxray status                    # 顯示 hub 資訊及已連線的 client
-ANTHROPIC_BASE_URL=http://localhost:5577 claude   # 手動設定（現有工作階段）
+ANTHROPIC_BASE_URL=http://localhost:5577 claude   # 將現有 claude session 指向運行中的 ccxray hub
 ```
 
 ### 多專案
@@ -56,7 +56,7 @@ cd ~/project-b && ccxray claude     # 連線至現有 hub
 
 ```bash
 $ ccxray status
-Hub: http://localhost:5577 (pid 12345, uptime 3600s, v1.1.0)
+Hub: http://localhost:5577 (pid 12345, uptime 3600s, v1.6.0)
 Connected clients (2):
   [1] pid 23456 — ~/dev/project-a
   [2] pid 34567 — ~/dev/project-b
@@ -70,25 +70,35 @@ Connected clients (2):
 
 即時觀看代理的思考過程。每個回合渲染成五層資訊卡：第 1 行 cost、cache 熱度（含 turn 間空檔時間，及時抓出 cache miss）、tool 失敗風險訊號、`hit:0%` 紅色警示、tools 列前置於標題上方。整場 session 的健康狀態一眼掃完，不必展開任何卡片。
 
-![時間軸檢視](https://raw.githubusercontent.com/lis186/ccxray/main/docs/timeline.png)
+![時間軸檢視](docs/timeline.png)
 
 ### 用量與成本
 
 追蹤你的實際花費。工作階段熱力圖、消耗速率、ROI 計算 — 精確掌握 token 流向。
 
-![用量分析](https://raw.githubusercontent.com/lis186/ccxray/main/docs/usage.png)
+![用量分析](docs/usage.png)
 
 ### System Prompt 追蹤
 
 自動偵測版本變更，內建 diff 檢視器。瀏覽 12 種已辨識的 agent 類型 — Orchestrator、General Purpose、Plan、Explore、Web Search、Codex Rescue、Claude Code Guide、Summarizer、Title Generator、Name Generator、Translator、SDK Agent — 精確掌握每次更新的差異。對 12,730 份真實捕捉的 prompts 做回溯驗證：被分類的項目 100% 正確，不確定的則誠實標為 `unknown`。
 
-![System Prompt 追蹤](https://raw.githubusercontent.com/lis186/ccxray/main/docs/system-prompt.png)
+![System Prompt 追蹤](docs/system-prompt.png)
 
 ### 鍵盤導航
 
 整個儀表板都能用鍵盤操控。每個畫面底部都有情境感知的快捷鍵提示列，會隨你移動即時更新目前有效的按鍵。按 `?` 展開完整快捷鍵清單。從 projects → sessions → turns → sections → timeline → 個別 diff hunk，全程不用碰滑鼠。
 
-![鍵盤導航](https://raw.githubusercontent.com/lis186/ccxray/main/docs/keyboard.png)
+![鍵盤導航](docs/keyboard.png)
+
+### Session 標題與 Cache 提醒
+
+Session 卡片顯示 Claude Code 自動生成的標題（例如 `Fix login button on mobile`），並附有即時 cache TTL 倒數（`cache 4m left`），不到 1 分鐘時變紅閃爍。任何 session 接近到期時，瀏覽器分頁標題會在 `ccxray` 和 `⚠ ccxray` 之間交替。可選的瀏覽器通知會在計畫感知的提前時間觸發 — Max 提前 5 分鐘、Pro/API key 提前 60 秒。直接 API 呼叫或標題生成仍在進行中的 session 退回顯示短雜湊。
+
+![Session 標題與 Cache 到期提醒](docs/cache-expiry.png)
+
+### 計畫自動偵測
+
+ccxray 透過讀取 Anthropic 的 `cache_creation` 用量欄位，自動偵測你的訂閱計畫（Pro、Max 5x、Max 20x），無需任何設定。頂部列顯示 `Plan: Max 5x · TTL 1h (auto)`。ROI 計算和配額面板均使用偵測到的計畫。若偵測結果有誤，可用 `CCXRAY_PLAN` 覆蓋。
 
 ### 其他功能
 
@@ -107,7 +117,7 @@ Claude Code  ──►  ccxray (:5577)  ──►  api.anthropic.com（或 ANTHR
                   儀表板（同一連接埠）
 ```
 
-ccxray 是透明的 HTTP 代理。它將請求原封不動地轉發到 Anthropic，將請求與回應記錄為 JSON 檔案，並在同一連接埠提供網頁儀表板。不需要 API 金鑰 — 它直接傳遞 Claude Code 送出的內容。
+ccxray 是透明的 HTTP 代理。它將請求轉發到 Anthropic，將請求與回應記錄為 JSON 檔案，並在同一連接埠提供網頁儀表板。不需要 API 金鑰 — 它直接傳遞 Claude Code 送出的內容。
 
 ## 設定
 
@@ -127,7 +137,11 @@ ccxray 是透明的 HTTP 代理。它將請求原封不動地轉發到 Anthropic
 | `AUTH_TOKEN` | _（無）_ | 存取控制用 API 金鑰（未設定時停用） |
 | `CCXRAY_HOME` | `~/.ccxray` | 基底目錄，存放 hub lockfile、logs、hub.log |
 | `CCXRAY_MAX_ENTRIES` | `5000` | 記憶體中最多保留的條目數（最舊的會被淘汰；磁碟日誌不受影響） |
-| `ANTHROPIC_BASE_URL` | — | 自訂上游 Anthropic 端點（例如企業閘道）。ccxray 啟動時會讀取此值並轉發至該位址，而非 `api.anthropic.com`。設定了 `ANTHROPIC_TEST_*` 時以其為準。 |
+| `CCXRAY_PLAN` | _（自動）_ | 覆蓋計畫偵測：`pro`、`max5x`、`max20x`、`api-key` |
+| `CCXRAY_DISABLE_TITLES` | _（未設定）_ | 設為 `1` 可停用 session 標題擷取（退回顯示短雜湊） |
+| `CCXRAY_MODEL_PREFIX` | _（未設定）_ | 轉發前在 model 名稱前加上前綴（例如 `databricks-`）。適用於上游需要廠商前綴 model 名稱、但 Claude Code 只接受標準名稱的情況。 |
+| `HTTPS_PROXY` / `https_proxy` | _（未設定）_ | 透過 HTTP CONNECT tunnel 將對外 HTTPS 流量導向企業 proxy。 |
+| `ANTHROPIC_BASE_URL` | — | 自訂上游 Anthropic 端點（例如企業閘道）。支援 base path — `https://host/serving-endpoints/anthropic` 直接可用。設定了 `ANTHROPIC_TEST_*` 時以其為準。 |
 
 日誌儲存在 `~/.ccxray/logs/`，格式為 `{timestamp}_req.json` 和 `{timestamp}_res.json`。從 v1.0 升級？`./logs/` 中的日誌會在首次啟動時自動遷移。
 
