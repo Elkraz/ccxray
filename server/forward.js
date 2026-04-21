@@ -26,6 +26,11 @@ function resolveTitleGenTitle(parsedBody, resPayload, receivedAt) {
   return clean;
 }
 
+// ── Status line injection flag ────────────────────────────────────────
+let statusLineEnabled = true;
+function setStatusLineEnabled(val) { statusLineEnabled = !!val; }
+function getStatusLineEnabled() { return statusLineEnabled; }
+
 // ── HTTPS CONNECT tunnel agent for corporate proxies ─────────────────
 
 function createTunnelAgent(proxyUrl) {
@@ -241,7 +246,7 @@ function handleSSEResponse(ctx, proxyRes, clientRes) {
       return r;
     }, '');
     const totalCtx = helpers.totalContextTokens(usage);
-    if (usage && totalCtx && stopReason !== 'tool_use') {
+    if (usage && totalCtx && stopReason !== 'tool_use' && statusLineEnabled) {
       const maxCtx = config.getMaxContext(parsedBody?.model, parsedBody?.system);
       const pct = (totalCtx / maxCtx * 100).toFixed(1);
       const newIdx = maxBlockIndex + 1;
@@ -497,4 +502,4 @@ function handleNonSSEResponse(ctx, proxyRes, clientRes) {
   });
 }
 
-module.exports = { forwardRequest, resolveProxyAgent, applyModelPrefix };
+module.exports = { forwardRequest, resolveProxyAgent, applyModelPrefix, stripInjectedStats, setStatusLineEnabled, getStatusLineEnabled };

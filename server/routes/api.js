@@ -8,6 +8,8 @@ const { tokenizeRequest } = require('../helpers');
 const { computeBlockDiff } = require('../system-prompt');
 const { getPlanConfig } = require('../plans');
 const { getEffectivePlan } = require('../plan-detector');
+const forward = require('../forward');
+const { readSettings, writeSettings } = require('../settings');
 
 const AUTO_COMPACT_PCT = 0.835;
 
@@ -142,6 +144,35 @@ function handleApiRoutes(clientReq, clientRes) {
     })().catch(e => {
       if (!clientRes.headersSent) clientRes.writeHead(500);
       clientRes.end(JSON.stringify({ error: e.message }));
+    });
+    return true;
+  }
+
+  if (clientReq.method === 'POST' && clientReq.url === '/_api/settings')
+  {
+    let body = '';
+    clientReq.on('data', c => { body += c; });
+    clientReq.on('end', () =>
+    {
+      try
+      {
+        const patch = JSON.parse(body);
+        const current = readSettings();
+        const updated = { ...current };
+        if (typeof patch.statusLine === 'boolean')
+        {
+          updated.statusLine = patch.statusLine;
+          forward.setStatusLineEnabled(patch.statusLine);
+        }
+        writeSettings(updated);
+        clientRes.writeHead(200, { 'Content-Type': 'application/json' });
+        clientRes.end(JSON.stringify(updated));
+      }
+      catch
+      {
+        clientRes.writeHead(400);
+        clientRes.end();
+      }
     });
     return true;
   }

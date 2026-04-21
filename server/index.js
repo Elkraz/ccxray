@@ -11,7 +11,8 @@ const helpers = require('./helpers');
 const { fetchPricing } = require('./pricing');
 const { restoreFromLogs } = require('./restore');
 const { warmUp: warmUpCosts } = require('./cost-budget');
-const { forwardRequest } = require('./forward');
+const { forwardRequest, setStatusLineEnabled, getStatusLineEnabled } = require('./forward');
+const { readSettings } = require('./settings');
 const { broadcastSessionStatus, broadcastPendingRequest } = require('./sse-broadcast');
 const { authMiddleware } = require('./auth');
 const { extractAgentType, splitB2IntoBlocks } = require('./system-prompt');
@@ -50,22 +51,24 @@ const hub = require('./hub');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const MIME_TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript' };
 
-// index.html with config injection (port may shift, so rebuilt after listen)
+// Load persisted settings and apply immediately
+const settings = readSettings();
+setStatusLineEnabled(settings.statusLine);
+
+// index.html with config injection — built fresh per request so dynamic values (statusLine) stay current
 let rawIndexHTML = '';
 try { rawIndexHTML = fs.readFileSync(path.join(PUBLIC_DIR, 'index.html'), 'utf8'); } catch {}
-let indexHTML = rawIndexHTML || '<html><body>Error loading dashboard</body></html>';
+let serverPort = 0;
 
-function rebuildIndexHTML(port) {
-  if (!rawIndexHTML) return;
-  const script = `<script>window.__PROXY_CONFIG__=${JSON.stringify({ DEFAULT_CONTEXT: config.DEFAULT_CONTEXT, PORT: port })}</script>`;
-  indexHTML = rawIndexHTML.replace('<!--__PROXY_CONFIG__-->', script);
-}
+function rebuildIndexHTML(port) { serverPort = port; }
 
 function serveStatic(url, clientRes) {
   const pathname = url.split('?')[0];
   if (pathname === '/' || pathname === '/index.html') {
+    const script = `<script>window.__PROXY_CONFIG__=${JSON.stringify({ DEFAULT_CONTEXT: config.DEFAULT_CONTEXT, PORT: serverPort, statusLine: getStatusLineEnabled() })}</script>`;
+    const html = rawIndexHTML ? rawIndexHTML.replace('<!--__PROXY_CONFIG__-->', script) : '<html><body>Error loading dashboard</body></html>';
     clientRes.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    clientRes.end(indexHTML);
+    clientRes.end(html);
     return true;
   }
   const ext = path.extname(pathname);

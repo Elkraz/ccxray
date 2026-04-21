@@ -291,6 +291,26 @@ function scrollTurnsToBottom() {
   if (followLiveTurn) colTurns.scrollTop = colTurns.scrollHeight;
 }
 
+// ── Status line injection state ──
+let statusLineEnabled = window.__PROXY_CONFIG__?.statusLine !== false;
+
+function toggleStatusLine() {
+  statusLineEnabled = !statusLineEnabled;
+  _applyStatsToggleUI();
+  fetch('/_api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ statusLine: statusLineEnabled }),
+  });
+}
+
+function _applyStatsToggleUI() {
+  const btn = document.getElementById('stats-toggle');
+  if (!btn) return;
+  btn.querySelector('.stats-on').classList.toggle('active', statusLineEnabled);
+  btn.querySelector('.stats-off').classList.toggle('active', !statusLineEnabled);
+}
+
 let selectedProjectName = null; // null = (all)
 let selectedSessionId = null;
 let selectedTurnIdx = -1;
@@ -799,11 +819,12 @@ function hideScorecard() {
   }
 }
 
-// Initialize scorecard hover when DOM is ready
+// Initialize scorecard hover and stats toggle when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initScorecardHover);
+  document.addEventListener('DOMContentLoaded', () => { initScorecardHover(); _applyStatsToggleUI(); });
 } else {
   initScorecardHover();
+  _applyStatsToggleUI();
 }
 
 function renderStackedAreaChart(el, turns) {
