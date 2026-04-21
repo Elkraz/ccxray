@@ -21,10 +21,9 @@ function readSettings()
   }
 }
 
-function writeSettings(data)
-{
+function writeSettings(data) {
   if (!fs.existsSync(SETTINGS_DIR)) fs.mkdirSync(SETTINGS_DIR, { recursive: true });
-  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(data, null, 2));
+  fs.writeFile(SETTINGS_PATH, JSON.stringify(data, null, 2), () => {});
 }
 
 module.exports = { readSettings, writeSettings };
