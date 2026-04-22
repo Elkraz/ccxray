@@ -238,6 +238,8 @@ function addEntry(e) {
     const firstSession = colSessions.querySelector('.session-item');
     if (firstSession) colSessions.insertBefore(sessEl, firstSession);
     else colSessions.appendChild(sessEl);
+    // Apply project filter immediately so new card doesn't flash visible then disappear
+    if (!_loading) applySessionFilter();
   }
   const sess = sessionsMap.get(sid);
   // Update cwd if not yet known or was only a quota-check

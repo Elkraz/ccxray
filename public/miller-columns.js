@@ -621,8 +621,9 @@ function initAutoSelect() {
 }
 
 function selectProject(name) {
-  // Toggle: clicking already-selected project returns to (all)
-  selectedProjectName = (name !== null && name === selectedProjectName) ? null : name;
+  // Never deselect: clicking the already-selected project is a no-op
+  if (name !== null && name === selectedProjectName) return;
+  selectedProjectName = name;
   renderProjectsCol();
   applySessionFilter();
 
