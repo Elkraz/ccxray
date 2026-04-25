@@ -1195,7 +1195,7 @@ function renderSectionsCol(idx) {
   const skillTotal = Object.values(skillCalls).reduce((s, n) => s + n, 0);
   // Extract cc_version for system badge
   const ccVer = req.system && Array.isArray(req.system) && req.system[0]
-    ? (req.system[0].text || '').match(/cc_version=(S+?)[; ]/)?.[1] : null;
+    ? (req.system[0].text || '').match(/cc_version=(\S+?)[; ]/)?.[1] : null;
   const sysVerBadge = ccVer
     ? `<div class="sysprompt-badge" onclick="event.stopPropagation();openSystemPromptPanel()">⚡ cc ${escapeHtml(ccVer)}</div>`
     : '';

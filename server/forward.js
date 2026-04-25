@@ -26,6 +26,26 @@ function resolveTitleGenTitle(parsedBody, resPayload, receivedAt) {
   return clean;
 }
 
+// ── thinkingStripped: true when prev non-subagent turn had thinking but current messages lost it ──
+// compaction (msgCount drop > 4) is excluded to avoid false positives on summarized history
+function computeThinkingStripped(isSubagent, reqSessionId, currMsgCount, parsedBody) {
+  if (isSubagent) return undefined;
+  let prevThink = null;
+  for (let i = store.entries.length - 1; i >= 0; i--) {
+    const e = store.entries[i];
+    if (e.sessionId === reqSessionId && !e.isSubagent && (e.thinkingDuration || 0) > 0) {
+      prevThink = e;
+      break;
+    }
+  }
+  if (!prevThink) return undefined;
+  if (currMsgCount < (prevThink.msgCount || 0) - 4) return undefined;
+  const hasThinkBlocks = (parsedBody?.messages || []).some(m =>
+    m.role === 'assistant' && Array.isArray(m.content) && m.content.some(b => b.type === 'thinking')
+  );
+  return hasThinkBlocks ? undefined : true;
+}
+
 // ── Status line injection flag ────────────────────────────────────────
 let statusLineEnabled = true;
 function setStatusLineEnabled(val) { statusLineEnabled = !!val; }
@@ -332,6 +352,9 @@ function handleSSEResponse(ctx, proxyRes, clientRes) {
       || null;
     const toolFail = helpers.hasToolFail(parsedBody);
     const thinkingDuration = helpers.computeThinkingDuration(events);
+    const thinkingBudget = parsedBody?.thinking?.budget_tokens ?? null;
+    const currMsgCount = parsedBody?.messages?.length || 0;
+    const thinkingStripped = computeThinkingStripped(isSubagent, reqSessionId, currMsgCount, parsedBody);
     const entry = {
       id, ts: ctx.ts, sessionId, method: ctx.clientReq.method, url: ctx.clientReq.url,
       req: parsedBody, res: events,
@@ -344,7 +367,7 @@ function handleSSEResponse(ctx, proxyRes, clientRes) {
       thinkingDuration,
       duplicateToolCalls: helpers.extractDuplicateToolCalls(parsedBody?.messages),
       model: parsedBody?.model || null,
-      msgCount: parsedBody?.messages?.length || 0,
+      msgCount: currMsgCount,
       toolCount: parsedBody?.tools?.length || 0,
       toolCalls: helpers.extractToolCalls(parsedBody?.messages),
       isSubagent,
@@ -354,6 +377,9 @@ function handleSSEResponse(ctx, proxyRes, clientRes) {
       toolFail,
       sysHash: ctx.sysHash || null,
       toolsHash: ctx.toolsHash || null,
+      coreHash: ctx.coreHash || null,
+      thinkingBudget,
+      thinkingStripped,
     };
     entry.hasCredential = helpers.entryHasCredential(entry) || undefined;
     entry.toolSources = helpers.buildToolSources(entry) || undefined;
@@ -375,6 +401,9 @@ function handleSSEResponse(ctx, proxyRes, clientRes) {
       elapsed, status: proxyRes.statusCode,
       receivedAt: startTime,
       sysHash: ctx.sysHash || null, toolsHash: ctx.toolsHash || null,
+      coreHash: entry.coreHash,
+      thinkingBudget: entry.thinkingBudget,
+      thinkingStripped: entry.thinkingStripped,
       hasCredential: entry.hasCredential,
       toolSources: entry.toolSources,
     });
@@ -446,6 +475,9 @@ function handleNonSSEResponse(ctx, proxyRes, clientRes) {
       || null;
     const toolFail = helpers.hasToolFail(parsedBody);
     const stopReason = resData?.stop_reason || '';
+    const thinkingBudget = parsedBody?.thinking?.budget_tokens ?? null;
+    const currMsgCount = parsedBody?.messages?.length || 0;
+    const thinkingStripped = computeThinkingStripped(isSubagent, reqSessionId, currMsgCount, parsedBody);
     const entry = {
       id, ts: ctx.ts, sessionId, method: ctx.clientReq.method, url: ctx.clientReq.url,
       req: parsedBody, res: resData,
@@ -457,7 +489,7 @@ function handleNonSSEResponse(ctx, proxyRes, clientRes) {
       receivedAt: startTime,
       duplicateToolCalls: helpers.extractDuplicateToolCalls(parsedBody?.messages),
       model: parsedBody?.model || null,
-      msgCount: parsedBody?.messages?.length || 0,
+      msgCount: currMsgCount,
       toolCount: parsedBody?.tools?.length || 0,
       toolCalls: helpers.extractToolCalls(parsedBody?.messages),
       isSubagent,
@@ -467,6 +499,9 @@ function handleNonSSEResponse(ctx, proxyRes, clientRes) {
       toolFail,
       sysHash: ctx.sysHash || null,
       toolsHash: ctx.toolsHash || null,
+      coreHash: ctx.coreHash || null,
+      thinkingBudget,
+      thinkingStripped,
     };
     entry.hasCredential = helpers.entryHasCredential(entry) || undefined;
     entry.toolSources = helpers.buildToolSources(entry) || undefined;
@@ -486,6 +521,9 @@ function handleNonSSEResponse(ctx, proxyRes, clientRes) {
       elapsed, status: proxyRes.statusCode,
       receivedAt: startTime,
       sysHash: ctx.sysHash || null, toolsHash: ctx.toolsHash || null,
+      coreHash: entry.coreHash,
+      thinkingBudget: entry.thinkingBudget,
+      thinkingStripped: entry.thinkingStripped,
       hasCredential: entry.hasCredential,
       toolSources: entry.toolSources,
     });

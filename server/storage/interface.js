@@ -21,6 +21,10 @@
  *
  * @property {(id: string, suffix: string) => Promise<{mtimeMs: number}>} stat
  *   Get metadata (at minimum mtimeMs) for a log artifact. Throws if not found.
+ *
+ * @property {(filename: string) => Promise<void>} deleteFile
+ *   Delete a log artifact by full filename (e.g. '2025-03-17T12-00-00-000_req.json').
+ *   Must silently succeed if the file does not exist.
  */
 
 module.exports = {};

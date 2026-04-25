@@ -57,6 +57,7 @@ const { host: ANTHROPIC_HOST, port: ANTHROPIC_PORT, protocol: ANTHROPIC_PROTOCOL
 const LOGS_DIR = path.join(os.homedir(), '.ccxray', 'logs');
 const LEGACY_LOGS_DIR = path.join(__dirname, '..', 'logs');
 const RESTORE_DAYS = parseInt(process.env.RESTORE_DAYS || '3', 10);
+const LOG_RETENTION_DAYS = parseInt(process.env.LOG_RETENTION_DAYS || '14', 10);
 const REWRITE_MODEL_PREFIX = process.env.CCXRAY_MODEL_PREFIX || '';
 
 // Storage adapter (local by default, S3 via STORAGE_BACKEND=s3)
@@ -135,6 +136,7 @@ module.exports = {
   ANTHROPIC_BASE_URL_SOURCE,
   LOGS_DIR,
   RESTORE_DAYS,
+  LOG_RETENTION_DAYS,
   REWRITE_MODEL_PREFIX,
   storage,
   MODEL_CONTEXT_FALLBACK,

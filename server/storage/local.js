@@ -35,6 +35,14 @@ function createLocalStorage(logsDir) {
       return fsp.stat(path.join(logsDir, id + suffix));
     },
 
+    async deleteFile(filename) {
+      try {
+        await fsp.unlink(path.join(logsDir, filename));
+      } catch (e) {
+        if (e.code !== 'ENOENT') throw e;
+      }
+    },
+
     // ── Index (index.ndjson) ──────────────────────────────────────────
 
     async appendIndex(line) {

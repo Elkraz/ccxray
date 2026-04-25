@@ -85,6 +85,18 @@ function createS3Storage(opts) {
       }));
       return { mtimeMs: res.LastModified ? res.LastModified.getTime() : Date.now() };
     },
+
+    async deleteFile(filename) {
+      const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+      try {
+        await getClient().send(new DeleteObjectCommand({
+          Bucket: bucket,
+          Key: prefix + filename,
+        }));
+      } catch (e) {
+        if (e?.$metadata?.httpStatusCode !== 404 && e?.name !== 'NoSuchKey') throw e;
+      }
+    },
   };
 }
 

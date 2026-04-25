@@ -162,4 +162,38 @@ async function buildVersionIndex() {
   return sysHashToAgentKey;
 }
 
-module.exports = { loadEntryReqRes, restoreFromLogs };
+// ── Prune log files older than LOG_RETENTION_DAYS ───────────────────
+// Files belonging to entries currently restored in memory are never pruned —
+// otherwise lazy-load (loadEntryReqRes) would return null after restart.
+
+async function pruneLogs() {
+  if (!config.LOG_RETENTION_DAYS || config.LOG_RETENTION_DAYS <= 0) return;
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - config.LOG_RETENTION_DAYS);
+  const cutoffStr = cutoff.toLocaleString('sv-SE', { timeZone: 'Asia/Taipei' }).slice(0, 10);
+
+  const protectedIds = new Set(store.entries.map(e => e.id));
+
+  let files;
+  try { files = await config.storage.list(); } catch { return; }
+
+  let deleted = 0, kept = 0;
+  for (const filename of files) {
+    const m = filename.match(/^(\d{4}-\d{2}-\d{2}T.*?)_(req|res)\.json$/);
+    if (!m) continue;
+    if (filename.slice(0, 10) >= cutoffStr) continue;
+    if (protectedIds.has(m[1])) { kept++; continue; }
+    try {
+      await config.storage.deleteFile(filename);
+      deleted++;
+    } catch {}
+  }
+
+  if (deleted > 0 || kept > 0) {
+    const keptMsg = kept > 0 ? `, kept ${kept} referenced by restored entries` : '';
+    console.log(`\x1b[90m   Pruned ${deleted} log files older than ${config.LOG_RETENTION_DAYS} days${keptMsg}\x1b[0m`);
+  }
+}
+
+module.exports = { loadEntryReqRes, restoreFromLogs, pruneLogs };

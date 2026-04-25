@@ -339,6 +339,9 @@ function addEntry(e) {
     toolFail: e.toolFail || false,
     toolSources: e.toolSources || null,
     title: e.title || null,
+    thinkingBudget: e.thinkingBudget ?? null,
+    coreHash: e.coreHash || null,
+    thinkingStripped: e.thinkingStripped || false,
   });
 
   // ── V3 turn card: five-line layout ──
@@ -413,13 +416,17 @@ function addEntry(e) {
     : '';
 
   // Line 4: [time-info] [tools]
-  // time-info: elapsed [wait:gap] [think:N] — flex:1, can clip; tools: flex-shrink:0, always visible
+  // time-info: elapsed [wait:gap] [think:N] [budget:xxx] — flex:1, can clip; tools: flex-shrink:0, always visible
   const elapsedMs = parseFloat(e.elapsed || 0) * 1000;
   const thinkPart = (e.thinkingDuration && e.thinkingDuration >= 0.05)
     ? 'think:' + e.thinkingDuration.toFixed(1) + 's'
     : '';
   const waitPart = (gapMs != null && gapMs >= 500) ? 'wait:' + formatGap(gapMs) : '';
-  const secondaryParts = [waitPart, thinkPart].filter(Boolean).join(' · ');
+  const budgetVal = e.thinkingBudget;
+  const budgetPart = budgetVal != null
+    ? 'budget:' + (budgetVal >= 8000 ? 'high' : budgetVal >= 3000 ? 'med' : 'low')
+    : '';
+  const secondaryParts = [waitPart, thinkPart, budgetPart].filter(Boolean).join(' · ');
   const secondaryHtml = secondaryParts
     ? ' <span class="turn-elapsed-secondary" title="' + escapeHtml(gapTitle) + '">(' + secondaryParts + ')</span>'
     : '';
@@ -440,6 +447,16 @@ function addEntry(e) {
   if (hasCred) riskMarkers.push('cred');
   if (toolFail) riskMarkers.push('tool-fail');
   if (dupesMax >= 2) riskMarkers.push('dupes\xD7' + dupesMax);
+  if (e.thinkingStripped === true) riskMarkers.push('thinking-stripped');
+  if (e.coreHash) {
+    for (let i = allEntries.length - 2; i >= 0; i--) {
+      const prev = allEntries[i];
+      if (prev.sessionId === sid && !prev.isSubagent) {
+        if (prev.coreHash && prev.coreHash !== e.coreHash) riskMarkers.push('sys-changed');
+        break;
+      }
+    }
+  }
   const riskLine = riskMarkers.length ? '<div class="turn-risk-line">' + riskMarkers.join(' ') + '</div>' : '';
 
   el.innerHTML = identityLine + titleLine + ctxBarHtml + secondaryLine + riskLine;
